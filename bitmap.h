@@ -10,6 +10,8 @@
 
         #include <stdio.h>
         #include <stdlib.h>
+        #define WIDTH 8
+        #define HEIGHT 8
 
         typedef struct bitmapfileheader BITMAP_FILEHEADER;
         typedef struct bitmapinfoheader BITMAP_INFOHEADER;
@@ -25,10 +27,10 @@
         void leituraInfoHeader(FILE *file, BITMAP_INFOHEADER *infoHeader);
         void escreveInfoHeader(FILE *file, BITMAP_INFOHEADER *infoHeader);
 
-        void iniciaRGB(BITMAP_RGB** RGB, BITMAP_INFOHEADER *infoHeader);
-        void liberaRGB(BITMAP_RGB** RGB, BITMAP_INFOHEADER *infoHeader);
-        void leituraRGB(FILE *F, BITMAP_RGB *RGB, BITMAP_INFOHEADER *infoHeader);
-        void escreveRGB(FILE *F, BITMAP_RGB *RGB, BITMAP_INFOHEADER *infoHeader);
+        void iniciaRGB(BITMAP_RGB** RGB);
+        void liberaRGB(BITMAP_RGB** RGB);
+        void leituraRGB(FILE *F, BITMAP_RGB *RGB);
+        void escreveRGB(FILE *F, BITMAP_RGB *RGB);
 
         int bitmapWidth(BITMAP_INFOHEADER *infoHeader);
         int bitmapHeight(BITMAP_INFOHEADER *infoHeader);

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include "bitmap.h"
 #include "compressor.h"
+#include "lista.h"
 
 void finalizarPrograma(char* mensagem);
 
@@ -18,12 +19,7 @@ int main() {
 
     // Declara as estruturas que armazenam os dados do arquivo bitmap
     BITMAP_FILEHEADER *fileHeader;
-    BITMAP_INFOHEADER *infoHeader;
-    BITMAP_RGB *RGB;
-
-    // Declara as estruturas utilizadas na compressao 
-    COMPRESSOR_YCBCR *YCbCr;
-    COMPRESSOR_YCBCR *frequencias;
+    BITMAP_INFOHEADER *infoHeader;    
 
     // Inicializa os cabecalhos
     iniciaHeader(&fileHeader);
@@ -49,26 +45,14 @@ int main() {
 
             case 1: {
 
-                // Declara e le o nome da imagem a ser comprimida
                 /**
-                 * barbara_gray.bmp 
-                 * lena_gray.bmp
-                 * BLK.bmp
-                 * flag.bmp
-                 * land.bmp
-                 * land2.bmp
-                 * land3.bmp
-                 * marbles.bmp
-                 * ray.bmp
-                 * tru256.bmp
-                 * venus.bmp
-                 * WHT.bmp
-                 * xing.bmp
+                 * airplane
                  * 
                 */
-                char* nomeArquivo = "./img/ray.bmp";
-                //printf("Insira o nome da imagem a ser comprimida:\n");
-                //scanf("%ms", &nomeArquivo);
+                // Declara e le o nome da imagem a ser comprimida
+                char* nomeArquivo = "./img/goldhill.bmp";
+                // printf("Insira o nome da imagem a ser comprimida:\n");
+                // scanf("%ms", &nomeArquivo);
 
                 // Abertura dos arquivos de leitura e escrita
                 FILE *arquivo;
@@ -96,46 +80,112 @@ int main() {
                 
                 }
 
-                // Inicializa a matriz RGB e le as cores da imagem
-                iniciaRGB(&RGB, infoHeader);
-                leituraRGB(arquivo, RGB, infoHeader);
+                // Cria uma nova imagem
+                FILE *arquivoGerado;
+                if((arquivoGerado = fopen("gerado.bmp", "w+b")) == NULL)
+                    return 0;
 
-                // Inicializa a estrutura YCbCr e converte de RGB para YCbCr
-                iniciaYCBCR(&YCbCr, infoHeader);
-                RGBparaYCBCR(RGB, YCbCr, infoHeader);
+                // Escreve os dados de cabecalho
+                escreveHeader(arquivoGerado, fileHeader);
+                escreveInfoHeader(arquivoGerado, infoHeader);
 
-                // Realiza o processo de downsampling
-                DownSampling(&YCbCr, infoHeader);
+                // unsigned char testBlockA[8][8] = { 
+                //     {  1,  19,  37,  55,  73,  91, 109, 127},
+                //     { 19,  37,  55,  73,  91, 109, 127, 145},
+                //     { 37,  55,  73,  91, 109, 127, 145, 163},
+                //     { 55,  73,  91, 109, 127, 145, 163, 181},
+                //     { 73,  91, 109, 127, 145, 163, 181, 199},
+                //     { 91, 109, 127, 145, 163, 181, 199, 217},
+                //     {109, 127, 145, 163, 181, 199, 217, 235},
+                //     {127, 145, 163, 181, 199, 217, 235, 253} 
+                // };
 
-                // ImprimeYCBCR(YCbCr, infoHeader);
+                // teste(testBlockA);
 
-                // Inicializa a matriz de frequencias
-                // iniciaYCBCR(&frequencias, infoHeader);
-
+                // Inicializa os vetores de codificacao por diferenca de DC
+                COMPRESSOR_MATRIZ *diferencasDC;
+                iniciaMatriz(&diferencasDC, Height/8 * Width/8);
                 
-                    // Cria uma nova imagem
-                    FILE *arquivoGerado;
-                    if((arquivoGerado = fopen("gerado.bmp", "w+b")) == NULL)
-                        return 0;
+                for(int i=0; i<Height/8; i++) {
 
-                    // Escreve os dados de cabecalho
-                    escreveHeader(arquivoGerado, fileHeader);
-                    escreveInfoHeader(arquivoGerado, infoHeader);
+                    for(int j=0; j<Width/8; j++) {
 
-                    // Converte de YCbCr para RGB
-                    YCBCRparaRGB(RGB, YCbCr, infoHeader);
+                        // Inicializa a matriz RGB e le as cores da imagem
+                        BITMAP_RGB *RGB;
+                        iniciaRGB(&RGB);
+                        leituraRGB(arquivo, RGB);
 
-                    // Escreve a matriz de cores no formato RGB
-                    escreveRGB(arquivoGerado, RGB, infoHeader);
-                
+                         // Inicializa a estrutura YCbCr e converte de RGB para YCbCr
+                        COMPRESSOR_YCBCR *YCbCr;
+                        iniciaYCBCR(&YCbCr);
+                        RGBparaYCBCR(RGB, YCbCr);
+                        liberaRGB(&RGB);
 
+                        // Realiza o processo de downsampling
+                        // TODO: o downsampling deve ficar fora do loop
+                        // DownSampling(&YCbCr);
+
+                        // Aplica a transformada DCT
+                        COMPRESSOR_YCBCR *frequencias;
+                        iniciaYCBCR(&frequencias);
+                        transformadaDCT(frequencias, YCbCr);
+                        liberaYCBCR(&YCbCr);
+
+                        // Aplica a quantizacao
+                        COMPRESSOR_YCBCR *quantizada;
+                        iniciaYCBCR(&quantizada);
+                        Quantizacao(quantizada, frequencias);
+                        liberaYCBCR(&frequencias);
+
+                        // Vetoriza a matriz quantizada
+                        COMPRESSOR_MATRIZ *vetorizados;
+                        iniciaMatriz(&vetorizados, WIDTH*HEIGHT);
+                        Vetorizacao(quantizada, vetorizados);
+                        liberaYCBCR(&quantizada);
+
+                        // Codificacao por diferenca dos coeficientes DC
+                        int index = i*Height + j;
+                        for(int i=0; i<3; i++)
+                            setMatrizValue(diferencasDC, i, index, index == 0 ? getMatrizValue(vetorizados, i, 0) : getMatrizValue(vetorizados, i, 0) - getMatrizValue(diferencasDC, i, index-1));
+
+                        // Codificacao run length dos coeficientes AC
+                        COMPRESSOR_LISTAS *codificadosAC;
+                        iniciaListas(&codificadosAC);
+                        RunLength(vetorizados, codificadosAC);
+
+                        // Codificacao estatistica
+                        
+
+                        // Inverte a vetorizacao
+                        iniciaYCBCR(&quantizada);
+                        inversaVetorizacao(quantizada, vetorizados);
+                        liberaMatriz(&vetorizados, WIDTH*HEIGHT);
+
+                        // Aplica a inversa da quantizada
+                        iniciaYCBCR(&frequencias);
+                        inversaQuantizada(quantizada, frequencias);
+                        liberaYCBCR(&quantizada);
+
+                        // Aplica a inversa da transformada DCT
+                        iniciaYCBCR(&YCbCr);
+                        inversaDCT(frequencias, YCbCr);
+                        iniciaYCBCR(&frequencias);
+
+                        // Converte de YCbCr para RGB e Escreve a matriz de cores no formato RGB
+                        iniciaRGB(&RGB);
+                        YCBCRparaRGB(RGB, YCbCr);
+                        liberaYCBCR(&YCbCr);
+                        
+                        escreveRGB(arquivoGerado, RGB);
+                        liberaRGB(&RGB);                        
+
+                    }
+
+                }
+               
                 // Fecha os arquivos
                 fclose(arquivoGerado);
                 fclose(arquivo);
-
-                // Libera memoria
-                liberaRGB(&RGB, infoHeader);
-                liberaYCBCR(&YCbCr, infoHeader);
 
                 break;
 

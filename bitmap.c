@@ -143,6 +143,9 @@ void leituraInfoHeader(FILE *file, BITMAP_INFOHEADER *infoHeader) {
     fread(&infoHeader->ColorsUsed, sizeof (unsigned int), 1, file);
     fread(&infoHeader->ColorsImportant, sizeof (unsigned int), 1, file);
 
+    if(infoHeader->Width < 0) infoHeader->Width *= -1;
+    if(infoHeader->Height < 0) infoHeader->Height *= -1;
+
 }
 
 /**
@@ -168,48 +171,44 @@ void escreveInfoHeader(FILE *file, BITMAP_INFOHEADER *infoHeader) {
 }
 
 /**
- * Inicializa a estrutura de cores no formato RGB
+ * Inicializa uma estrutura de cores no formato RGB 8x8
  * 
  * @param BITMAP_RGB** RGB endereco da estrutura de cores no formato RGB
- * @param BITMAP_INFOHEADER *infoHeader estrutura do cabecalho de informacoes
 */
-void iniciaRGB(BITMAP_RGB** RGB, BITMAP_INFOHEADER *infoHeader) {
+void iniciaRGB(BITMAP_RGB** RGB) {
 
     *RGB = malloc(sizeof(BITMAP_RGB));
 
-    (*RGB)->R = malloc( sizeof(unsigned char*) * infoHeader->Height );
-    for(int i=0; i<infoHeader->Height; i++)
-        (*RGB)->R[i] = malloc( sizeof(unsigned char) * infoHeader->Width );
+    (*RGB)->R = malloc( sizeof(unsigned char*) * HEIGHT );
+    for(int i=0; i<HEIGHT; i++)
+        (*RGB)->R[i] = malloc( sizeof(unsigned char) * WIDTH );
 
-    (*RGB)->G = malloc( sizeof(unsigned char*) * infoHeader->Height );
-    for(int i=0; i<infoHeader->Height; i++)
-        (*RGB)->G[i] = malloc( sizeof(unsigned char) * infoHeader->Width );
+    (*RGB)->G = malloc( sizeof(unsigned char*) * HEIGHT );
+    for(int i=0; i<HEIGHT; i++)
+        (*RGB)->G[i] = malloc( sizeof(unsigned char) * WIDTH );
 
-    (*RGB)->B = malloc( sizeof(unsigned char*)* infoHeader->Height );
-    for(int i=0; i<infoHeader->Height; i++)
-        (*RGB)->B[i] = malloc( sizeof(unsigned char) * infoHeader->Width );
+    (*RGB)->B = malloc( sizeof(unsigned char*)* HEIGHT );
+    for(int i=0; i<HEIGHT; i++)
+        (*RGB)->B[i] = malloc( sizeof(unsigned char) * WIDTH );
 
 }
 
 /**
- * Libera a estrutura de cores no formato RGB
+ * Libera uma estrutura de cores no formato RGB 8x8
  * 
  * @param BITMAP_RGB** RGB endereco da estrutura de cores no formato RGB
- * @param BITMAP_INFOHEADER *infoHeader estrutura do cabecalho de informacoes
 */
-void liberaRGB(BITMAP_RGB** RGB, BITMAP_INFOHEADER *infoHeader) {
+void liberaRGB(BITMAP_RGB** RGB) {
 
-    int Height = infoHeader->Height;
-
-    for(int i=0; i<Height; i++)
+    for(int i=0; i<HEIGHT; i++)
         free((*RGB)->R[i]);
     free((*RGB)->R);
 
-    for(int i=0; i<Height; i++)
+    for(int i=0; i<HEIGHT; i++)
         free((*RGB)->G[i]);
     free((*RGB)->G);
 
-    for(int i=0; i<Height; i++)
+    for(int i=0; i<HEIGHT; i++)
         free((*RGB)->B[i]);
     free((*RGB)->B);
 
@@ -218,17 +217,16 @@ void liberaRGB(BITMAP_RGB** RGB, BITMAP_INFOHEADER *infoHeader) {
 }
 
 /**
- * Le e armazena as cores da imagem no formato RGB
+ * Le e armazena as cores de um bloco 8x8 da imagem no formato RGB
  * 
  * @param FILE *file ponteiro para o arquivo
  * @param BITMAP_RGB* RGB estrutura de cores no formato RGB
- * @param BITMAP_INFOHEADER *infoHeader estrutura do cabecalho de informacoes
 */
-void leituraRGB(FILE *file, BITMAP_RGB *RGB, BITMAP_INFOHEADER *infoHeader) {
+void leituraRGB(FILE *file, BITMAP_RGB *RGB) {
 
-    for(int i=0; i< infoHeader->Height; i++) {
+    for(int i=0; i<HEIGHT; i++) {
 
-        for(int j=0; j< infoHeader->Width; j++) {
+        for(int j=0; j<WIDTH; j++) {
 
             fread( &( RGB->B[i][j] ), sizeof(unsigned char), 1, file);
             fread( &( RGB->G[i][j] ), sizeof(unsigned char), 1, file);
@@ -241,17 +239,16 @@ void leituraRGB(FILE *file, BITMAP_RGB *RGB, BITMAP_INFOHEADER *infoHeader) {
 }
 
 /**
- * Escreve as cores da imagem, no formato RGB, no arquivo
+ * Escreve as cores de um bloco 8x8 da imagem, no formato RGB, no arquivo
  * 
  * @param FILE *file ponteiro para o arquivo
  * @param BITMAP_RGB* RGB estrutura de cores no formato RGB
- * @param BITMAP_INFOHEADER *infoHeader estrutura do cabecalho de informacoes
 */
-void escreveRGB(FILE *file, BITMAP_RGB *RGB, BITMAP_INFOHEADER *infoHeader) {
+void escreveRGB(FILE *file, BITMAP_RGB *RGB) {
 
-    for(int i=0; i< infoHeader->Height; i++) {
+    for(int i=0; i<HEIGHT; i++) {
 
-        for(int j=0; j< infoHeader->Width; j++) {
+        for(int j=0; j<WIDTH; j++) {
 
             fwrite( &( RGB->B[i][j] ), sizeof(unsigned char), 1, file);
             fwrite( &( RGB->G[i][j] ), sizeof(unsigned char), 1, file);
