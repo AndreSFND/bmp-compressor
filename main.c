@@ -1,7 +1,12 @@
 /**
+ * USP Sao Carlos, ICMC
+ * Projeto de Multimidia (SCC0561) - Compressao de Imagens
+ * 
  * O programa pode comprimir um arquivo bitmap e descomprimir um binario, retornando a um estado semelhante ao original
  * 
- * @author Andre Santana Fernandes <11208537>
+ * @author  Andre Santana Fernandes <11208537>
+ * @author  Diogo Castanho Emidio <11297274>
+ * @author  Leonardo Antonetti da Motta <11275338>
 */
 
 #include <stdio.h>
@@ -45,10 +50,6 @@ int main() {
 
             case 1: {
 
-                /**
-                 * airplane
-                 * 
-                */
                 // Declara e le o nome da imagem a ser comprimida
                 char* nomeArquivo = "./img/goldhill.bmp";
                 // printf("Insira o nome da imagem a ser comprimida:\n");
@@ -82,29 +83,17 @@ int main() {
 
                 // Cria uma nova imagem
                 FILE *arquivoGerado;
-                if((arquivoGerado = fopen("gerado.bmp", "w+b")) == NULL)
+                if((arquivoGerado = fopen("comprimido.bin", "w+b")) == NULL)
                     return 0;
 
                 // Escreve os dados de cabecalho
                 escreveHeader(arquivoGerado, fileHeader);
                 escreveInfoHeader(arquivoGerado, infoHeader);
-
-                // unsigned char testBlockA[8][8] = { 
-                //     {  1,  19,  37,  55,  73,  91, 109, 127},
-                //     { 19,  37,  55,  73,  91, 109, 127, 145},
-                //     { 37,  55,  73,  91, 109, 127, 145, 163},
-                //     { 55,  73,  91, 109, 127, 145, 163, 181},
-                //     { 73,  91, 109, 127, 145, 163, 181, 199},
-                //     { 91, 109, 127, 145, 163, 181, 199, 217},
-                //     {109, 127, 145, 163, 181, 199, 217, 235},
-                //     {127, 145, 163, 181, 199, 217, 235, 253} 
-                // };
-
-                // teste(testBlockA);
-
+                
                 // Inicializa os vetores de codificacao por diferenca de DC
-                COMPRESSOR_MATRIZ *diferencasDC;
-                iniciaMatriz(&diferencasDC, Height/8 * Width/8);
+                int ultimoDCY = 0;
+                int ultimoDCCb = 0;
+                int ultimoDCCr = 0;
                 
                 for(int i=0; i<Height/8; i++) {
 
@@ -145,39 +134,23 @@ int main() {
 
                         // Codificacao por diferenca dos coeficientes DC
                         int index = i*Height + j;
-                        for(int i=0; i<3; i++)
-                            setMatrizValue(diferencasDC, i, index, index == 0 ? getMatrizValue(vetorizados, i, 0) : getMatrizValue(vetorizados, i, 0) - getMatrizValue(diferencasDC, i, index-1));
+                        int DCY = index == 0 ? getMatrizValue(vetorizados, 0, 0) : getMatrizValue(vetorizados, 0, 0) - ultimoDCY;
+                        int DCCb = index == 0 ? getMatrizValue(vetorizados, 1, 0) : getMatrizValue(vetorizados, 1, 0) - ultimoDCY;
+                        int DCCr = index == 0 ? getMatrizValue(vetorizados, 2, 0) : getMatrizValue(vetorizados, 2, 0) - ultimoDCY;
+
+                        ultimoDCY = getMatrizValue(vetorizados, 0, 0);
+                        ultimoDCCb = getMatrizValue(vetorizados, 1, 0);
+                        ultimoDCCr = getMatrizValue(vetorizados, 2, 0);
 
                         // Codificacao run length dos coeficientes AC
                         COMPRESSOR_LISTAS *codificadosAC;
                         iniciaListas(&codificadosAC);
                         RunLength(vetorizados, codificadosAC);
-
-                        // Codificacao estatistica
-                        
-
-                        // Inverte a vetorizacao
-                        iniciaYCBCR(&quantizada);
-                        inversaVetorizacao(quantizada, vetorizados);
                         liberaMatriz(&vetorizados, WIDTH*HEIGHT);
 
-                        // Aplica a inversa da quantizada
-                        iniciaYCBCR(&frequencias);
-                        inversaQuantizada(quantizada, frequencias);
-                        liberaYCBCR(&quantizada);
-
-                        // Aplica a inversa da transformada DCT
-                        iniciaYCBCR(&YCbCr);
-                        inversaDCT(frequencias, YCbCr);
-                        iniciaYCBCR(&frequencias);
-
-                        // Converte de YCbCr para RGB e Escreve a matriz de cores no formato RGB
-                        iniciaRGB(&RGB);
-                        YCBCRparaRGB(RGB, YCbCr);
-                        liberaYCBCR(&YCbCr);
-                        
-                        escreveRGB(arquivoGerado, RGB);
-                        liberaRGB(&RGB);                        
+                        // Codificacao estatistica e escrita dos dados no arquivo binario
+                        codificacaoEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC);
+                        liberaListas(&codificadosAC);                      
 
                     }
 
@@ -194,13 +167,90 @@ int main() {
             case 2: { 
 
                 // Declara e le o nome da imagem a ser descomprimida
-                char* nomeArquivo;
-                printf("Insira o nome da imagem a ser descomprimida:\n");
-                scanf("%ms", &nomeArquivo);
+                char* nomeArquivo = "comprimido.bin";
+                // printf("Insira o nome da imagem a ser descomprimida:\n");
+                // scanf("%ms", &nomeArquivo);
 
-                FILE *fptr;
+                // Abertura dos arquivos de leitura e escrita
+                FILE *arquivo;
+                if((arquivo = fopen(nomeArquivo, "rb")) == NULL)
+                    finalizarPrograma("Arquivo não encontrado");
+
+                // Realiza a leitura das informacoes do cabecalho
+                leituraHeader(arquivo, fileHeader);
+                leituraInfoHeader(arquivo, infoHeader);
+
+                // Le a altura e largura da imagem
+                int Width = bitmapWidth(infoHeader);
+                int Height = bitmapHeight(infoHeader);
+
+                // Verifica se as dimensoes estao dentro do esperado
+                if(Width < 8 || Height < 8 || Width > 1280 || Height > 800)
+                    finalizarPrograma("Dimensões fora do esperado. Utilize uma imagem entre 8x8 e 1280x800 pixeis.");
+
+                int bitcount = getBitCount(infoHeader);
                 
-                printf("Descompressao da imagem %s\n", nomeArquivo);
+                if(bitcount != 24) {
+                
+                    printf("Formato inválido (%d bits por pixel), escolha uma imagem com 24 bits por pixel.\n", bitcount);
+                    return 0;
+                
+                }
+
+                // Cria uma nova imagem
+                FILE *arquivoGerado;
+                if((arquivoGerado = fopen("gerado.bmp", "w+b")) == NULL)
+                    return 0;
+
+                // Escreve os dados de cabecalho
+                escreveHeader(arquivoGerado, fileHeader);
+                escreveInfoHeader(arquivoGerado, infoHeader);
+
+                // Inicializa os vetores de codificacao por diferenca de DC
+                int ultimoDCY = 0;
+                int ultimoDCCb = 0;
+                int ultimoDCCr = 0;
+
+                for(int i=0; i<Height/8; i++) {
+
+                    for(int j=0; j<Width/8; j++) {
+
+                        int *DCY, *DCCb, *DCCr;
+
+                        COMPRESSOR_LISTAS *codificadosAC;
+                        iniciaListas(&codificadosAC);
+                        leituraEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC);
+
+                        // Inverte a vetorizacao
+                        // iniciaYCBCR(&quantizada);
+                        // inversaVetorizacao(quantizada, vetorizados);
+                        // liberaMatriz(&vetorizados, WIDTH*HEIGHT);
+
+                        // Aplica a inversa da quantizada
+                        // iniciaYCBCR(&frequencias);
+                        // inversaQuantizada(quantizada, frequencias);
+                        // liberaYCBCR(&quantizada);
+
+                        // Aplica a inversa da transformada DCT
+                        // iniciaYCBCR(&YCbCr);
+                        // inversaDCT(frequencias, YCbCr);
+                        // iniciaYCBCR(&frequencias);
+
+                        // Converte de YCbCr para RGB e Escreve a matriz de cores no formato RGB
+                        // iniciaRGB(&RGB);
+                        // YCBCRparaRGB(RGB, YCbCr);
+                        // liberaYCBCR(&YCbCr);
+                        
+                        // escreveRGB(arquivoGerado, RGB);
+                        // liberaRGB(&RGB);  
+
+                    }
+
+                }
+
+                // Fecha os arquivos
+                fclose(arquivoGerado);
+                fclose(arquivo);
 
                 break;
 

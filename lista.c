@@ -1,7 +1,9 @@
 /**
  * TAD de uma lista
  * 
- * @author Andre Santana Fernandes <nUSP 11208537>
+ * @author  Andre Santana Fernandes <11208537>
+ * @author  Diogo Castanho Emidio <11297274>
+ * @author  Leonardo Antonetti da Motta <11275338>
 */
 
 #include "lista.h"
@@ -28,6 +30,7 @@ struct no_ {
 
     int zeros;
     int valor;
+    int categoria;
 
     NO *proximo;
     
@@ -118,7 +121,7 @@ bool Lista_Cheia(LISTA *Lista) {
  * 
  * @returns bool booleano que informa se o vertice foi inserido
 */
-bool Lista_Inserir(LISTA *Lista, int zeros, int valor) {
+bool Lista_Inserir(LISTA *Lista, int zeros, int valor, int categoria) {
 
     if(!Lista_Cheia(Lista) && Lista != NULL){
 
@@ -131,6 +134,7 @@ bool Lista_Inserir(LISTA *Lista, int zeros, int valor) {
         
         novo_no->zeros = zeros;
         novo_no->valor = valor;
+        novo_no->categoria = categoria;
         novo_no->proximo = NULL;
 
         Lista->fim = novo_no;
@@ -191,5 +195,32 @@ NO *Lista_No_Proximo(NO *No) {
         return No->proximo;
 
     return NULL;
+
+}
+
+int Lista_No_Zeros(NO *No) {
+
+    if(No != NULL)
+        return No->zeros;
+
+    return -1;
+
+}
+
+int Lista_No_Valor(NO *No) {
+
+    if(No != NULL)
+        return No->valor;
+
+    return -1;
+
+}
+
+int Lista_No_Categoria(NO *No) {
+
+    if(No != NULL)
+        return No->categoria;
+
+    return -1;
 
 }

@@ -1,7 +1,9 @@
 /**
  * O TAD eh responsavel por manipular as informacoes ao longo do processo de compressao do arquivo
  * 
- * @author Andre Santana Fernandes <11208537>
+ * @author  Andre Santana Fernandes <11208537>
+ * @author  Diogo Castanho Emidio <11297274>
+ * @author  Leonardo Antonetti da Motta <11275338>
 */
 
 #ifndef H_COMPRESSOR
@@ -10,6 +12,7 @@
 
         #include <stdio.h>
         #include <stdlib.h>
+        #include <string.h>
         #include <math.h>
         #include "bitmap.h"
         #include "lista.h"
@@ -45,9 +48,14 @@
         void Vetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados);
         void inversaVetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados);
 
-        void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *Listas);
-        void Codificacao();
+        void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC);
+        
+        void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC);
+        void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC);
 
-        void teste(unsigned char testBlockA[8][8]);
+        int categoriaCoeficiente(float coeficiente);
+        char* prefixoDC(int categoria);
+        char* prefixoAC(int zeros, int categoria);
+        char* sufixoDCAC(int categoria, int valor);
 
 #endif

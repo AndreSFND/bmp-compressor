@@ -1,7 +1,9 @@
 /**
  * O TAD eh responsavel por manipular as informacoes do arquivo bitmap
  * 
- * @author Andre Santana Fernandes <11208537>
+ * @author  Andre Santana Fernandes <11208537>
+ * @author  Diogo Castanho Emidio <11297274>
+ * @author  Leonardo Antonetti da Motta <11275338>
 */
 
 #include "bitmap.h"
