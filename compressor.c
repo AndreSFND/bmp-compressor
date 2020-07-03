@@ -40,6 +40,15 @@ struct compressorlistas {
 
 };
 
+char *strrev(char *str);
+void converterDeciBin(int deci, char *bin, int tamanho);
+void converterBinDeci(char *bin, int *deci);
+void inverteSufixoDCAC(char *sufixo, int categoria, int *valor);
+int invertePrefixoDC(char *prefixo);
+void invertePrefixoAC(char *prefixo, int *zeros, int *categoria);
+void converteDC(int categoria, int DC, int *valor);
+void converteAC(int categoria, int AC, int *valor, int *zeros);
+
 void iniciaListas(COMPRESSOR_LISTAS **Listas) {
 
     *Listas = malloc(sizeof(COMPRESSOR_LISTAS));
@@ -387,10 +396,10 @@ void inversaDCT(COMPRESSOR_YCBCR *frequencias, COMPRESSOR_YCBCR *YCbCr) {
  * @param COMPRESSOR_YCBCR *frequencias estrutura de dados da matriz de frequencias
  * @param COMPRESSOR_YCBCR *quantizada estrutura de dados da matriz quantizada
 */
-void Quantizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias) {
+void Quantizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias, int fatorCompressao) {
 
     // Fator de compressao
-    int k = 1;
+    int k = fatorCompressao;
 
     // Matriz de quantizacao de luminancia
     int QLuminancia[8][8] = {
@@ -434,10 +443,10 @@ void Quantizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias) {
 
 }
 
-void inversaQuantizada(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias) {
+void inversaQuantizada(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias, int fatorCompressao) {
 
     // Fator de compressao
-    int k = 1;
+    int k = fatorCompressao;
 
     // Matriz de quantizacao de luminancia
     int QLuminancia[8][8] = {
@@ -719,10 +728,13 @@ void inversaRunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codific
 
 }
 
-void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC) {
+void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC, int fatorCompressao) {
+
+    unsigned char fator = (unsigned char) fatorCompressao;
+    fwrite(&fator, sizeof(unsigned char), 1, file);
 
     int i, length;
-    int buffer = 0; // ocupa 4 bytes de espaco de memoria*/
+    unsigned short int buffer = 0; // Ocupa 2 bytes de espaco de memoria*/
     unsigned char categoria;
     char *fim = "1010";
 
@@ -896,6 +908,183 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
 
     fwrite(&categoria, sizeof(unsigned char), 1, file);
     fwrite(&buffer, sizeof(buffer), 1, file);
+
+}
+
+void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC, int *fatorCompressao) {
+
+    unsigned char fator;
+    fread(&fator, sizeof(unsigned char), 1, file);
+    *fatorCompressao = (int) fator;
+
+    unsigned char categoria;
+    char *prefixo, *sufixo;
+    int codigo, zeros, valor;
+
+    fread(&categoria, sizeof(unsigned char), 1, file);
+    fread(&codigo, sizeof(unsigned short int), 1, file);
+    converteDC((int)categoria, codigo, DCY);
+
+    fread(&categoria, sizeof(unsigned char), 1, file);
+    fread(&codigo, sizeof(unsigned short int), 1, file);
+    converteDC((int)categoria, codigo, DCCb);
+    
+    fread(&categoria, sizeof(unsigned char), 1, file);
+    fread(&codigo, sizeof(unsigned short int), 1, file);
+    converteDC((int)categoria, codigo, DCCr);
+
+    codigo = 0;
+
+    while( codigo != 10 ) {
+
+        fread(&categoria, sizeof(unsigned char), 1, file);
+        fread(&codigo, sizeof(unsigned short int), 1, file);
+
+        if(codigo == 10) break;
+
+        converteAC((int)categoria, codigo, &valor, &zeros);
+        Lista_Inserir(codificadosAC->listaY, zeros, valor, categoria);
+
+    }
+
+    codigo = 0;
+
+    while( codigo != 10 ) {
+
+        fread(&categoria, sizeof(unsigned char), 1, file);
+        fread(&codigo, sizeof(unsigned short int), 1, file);
+
+        if(codigo == 10) break;
+
+        converteAC((int)categoria, codigo, &valor, &zeros);
+        Lista_Inserir(codificadosAC->listaCb, zeros, valor, categoria);
+
+    }
+
+    codigo = 0;
+
+    while( codigo != 10 ) {
+
+        fread(&categoria, sizeof(unsigned char), 1, file);
+        fread(&codigo, sizeof(unsigned short int), 1, file);
+        
+        if(codigo == 10) break;
+
+        converteAC((int)categoria, codigo, &valor, &zeros);
+        Lista_Inserir(codificadosAC->listaCr, zeros, valor, categoria);
+
+    }
+
+}
+
+// Funcoes auxiliares
+
+int categoriaCoeficiente(float coeficiente) {
+
+    int categoria = 0;
+
+    while(true) {
+
+        int range = pow(2, categoria)-1;
+
+        if(abs(coeficiente) <= range)
+            return categoria;
+
+        categoria++;
+
+    }
+
+}
+
+char* prefixoDC(int categoria) {
+
+    char* prefixos[11] = {
+
+        "010",
+        "011",
+        "100",
+        "00",
+        "101",
+        "110",
+        "1110",
+        "11110",
+        "111110",
+        "1111110",
+        "11111110"
+
+    };
+
+    if(categoria >= 0 && categoria <= 10)
+        return prefixos[categoria];
+    
+    return "";
+
+}
+
+char* prefixoAC(int zeros, int categoria) {
+
+    if(zeros == 0 && categoria == 0)
+        return "1010";
+    else if(zeros == 15 && categoria == 0)
+        return "111111110111";
+
+    char* prefixos[16][10] = {
+
+        { "00", "01", "100", "1011", "11010", "111000", "1111000", "1111110110", "1111111110000010", "1111111110000011" },
+        { "1100", "111001", "1111001", "111110110", "11111110110", "1111111110000100", "1111111110000101", "1111111110000110", "1111111110000111", "1111111110001000" },
+        { "11011", "11111000", "1111110111", "1111111110001001", "1111111110001010", "1111111110001011", "1111111110001100", "1111111110001101", "1111111110001110", "1111111110001111" },
+        { "111010", "111110111", "11111110111", "1111111110010000", "1111111110010001", "1111111110010010", "1111111110010011", "1111111110010100", "1111111110010101", "1111111110010110" },
+        { "111011", "1111111000", "1111111110010111", "1111111110011000", "1111111110011001", "1111111110011010", "1111111110011011", "1111111110011100", "1111111110011101", "1111111110011110" },
+        { "1111010", "1111111001", "1111111110011111", "1111111110100000", "1111111110100001", "1111111110100010", "1111111110100011", "1111111110100100", "1111111110100101", "1111111110100110" },
+        { "1111011", "11111111000", "1111111110100111", "1111111110101000", "1111111110101001", "1111111110101010", "1111111110101011", "1111111110101100", "1111111110101101", "1111111110101110" },
+        { "11111001", "11111111001", "1111111110101111", "1111111110110000", "1111111110110001", "1111111110110010", "1111111110110011", "1111111110110100", "1111111110110101", "1111111110110110" },
+        { "11111010", "111111111000000", "1111111110110111", "1111111110111000", "1111111110111001", "1111111110111010", "1111111110111011", "1111111110111100", "1111111110111101", "1111111110111110" },
+        { "111111000", "1111111110111111", "1111111111000000", "1111111111000001", "1111111111000010", "1111111111000011", "1111111111000100", "1111111111000101", "1111111111000110", "1111111111000111" },
+        { "111111001", "1111111111001000", "1111111111001001", "1111111111001010", "1111111111001011", "1111111111001100", "1111111111001101", "1111111111001110", "1111111111001111", "1111111111010000" },
+        { "111111010", "1111111111010001", "1111111111010010", "1111111111010011", "1111111111010100", "1111111111010101", "1111111111010110", "1111111111010111", "1111111111011000", "1111111111011001" },
+        { "1111111010", "1111111111011010", "1111111111011011", "1111111111011100", "1111111111011101", "1111111111011110", "1111111111011111", "1111111111100000", "1111111111100001", "1111111111100010" },
+        { "11111111010", "1111111111100011", "1111111111100100", "1111111111100101", "1111111111100110", "1111111111100111", "1111111111101000", "1111111111101001", "1111111111101010", "1111111111101011" },
+        { "111111110110", "1111111111101100", "1111111111101101", "1111111111101110", "1111111111101111", "1111111111110000", "1111111111110001", "1111111111110010", "1111111111110011", "1111111111110100" },
+        { "1111111111110101", "1111111111110110", "1111111111110111", "1111111111111000", "1111111111111001", "1111111111111010", "1111111111111011", "1111111111111100", "1111111111111101", "1111111111111110" },
+
+    }; 
+
+    if(zeros >= 0 && zeros <= 15 && categoria >= 0 && categoria <= 10)
+        return prefixos[zeros][categoria-1];
+
+    return "";
+
+}
+
+char* sufixoDCAC(int categoria, int valor) {
+
+    if(!categoria)
+        return "";
+
+    char *sufixo = calloc(categoria, sizeof(char));
+
+    if(valor == -1 || valor == 1) {
+    
+        if(valor == 1) sufixo[0] = '1';
+        else sufixo[0] = '0';
+
+        return sufixo;
+    
+    }
+
+    int min, cont = 0;
+
+    min = (pow(2, categoria) * -1) + 1;
+
+    if(valor > 0)
+        cont += min;
+
+    for(min; min < valor; min++)
+        cont++;
+
+    converterDeciBin(cont, sufixo, categoria);
+
+    return sufixo;
 
 }
 
@@ -1104,174 +1293,3 @@ void converteAC(int categoria, int AC, int *valor, int *zeros) {
     free(codigo);
 
 } 
-
-void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC) {
-
-    unsigned char categoria;
-    char *prefixo, *sufixo;
-    int codigo, zeros, valor;
-
-    fread(&categoria, sizeof(unsigned char), 1, file);
-    fread(&codigo, sizeof(int), 1, file);
-    converteDC((int)categoria, codigo, DCY);
-
-    fread(&categoria, sizeof(unsigned char), 1, file);
-    fread(&codigo, sizeof(int), 1, file);
-    converteDC((int)categoria, codigo, DCCb);
-    
-    fread(&categoria, sizeof(unsigned char), 1, file);
-    fread(&codigo, sizeof(int), 1, file);
-    converteDC((int)categoria, codigo, DCCr);
-
-    codigo = 0;
-
-    while( codigo != 10 ) {
-
-        fread(&categoria, sizeof(unsigned char), 1, file);
-        fread(&codigo, sizeof(int), 1, file);
-
-        if(codigo == 10) break;
-
-        converteAC((int)categoria, codigo, &valor, &zeros);
-        Lista_Inserir(codificadosAC->listaY, zeros, valor, categoria);
-
-    }
-
-    codigo = 0;
-
-    while( codigo != 10 ) {
-
-        fread(&categoria, sizeof(unsigned char), 1, file);
-        fread(&codigo, sizeof(int), 1, file);
-
-        if(codigo == 10) break;
-
-        converteAC((int)categoria, codigo, &valor, &zeros);
-        Lista_Inserir(codificadosAC->listaCb, zeros, valor, categoria);
-
-    }
-
-    codigo = 0;
-
-    while( codigo != 10 ) {
-
-        fread(&categoria, sizeof(unsigned char), 1, file);
-        fread(&codigo, sizeof(int), 1, file);
-        
-        if(codigo == 10) break;
-
-        converteAC((int)categoria, codigo, &valor, &zeros);
-        Lista_Inserir(codificadosAC->listaCr, zeros, valor, categoria);
-
-    }
-
-}
-
-int categoriaCoeficiente(float coeficiente) {
-
-    int categoria = 0;
-
-    while(true) {
-
-        int range = pow(2, categoria)-1;
-
-        if(abs(coeficiente) <= range)
-            return categoria;
-
-        categoria++;
-
-    }
-
-}
-
-char* prefixoDC(int categoria) {
-
-    char* prefixos[11] = {
-
-        "010",
-        "011",
-        "100",
-        "00",
-        "101",
-        "110",
-        "1110",
-        "11110",
-        "111110",
-        "1111110",
-        "11111110"
-
-    };
-
-    if(categoria >= 0 && categoria <= 10)
-        return prefixos[categoria];
-    
-    return "";
-
-}
-
-char* prefixoAC(int zeros, int categoria) {
-
-    if(zeros == 0 && categoria == 0)
-        return "1010";
-    else if(zeros == 15 && categoria == 0)
-        return "111111110111";
-
-    char* prefixos[16][10] = {
-
-        { "00", "01", "100", "1011", "11010", "111000", "1111000", "1111110110", "1111111110000010", "1111111110000011" },
-        { "1100", "111001", "1111001", "111110110", "11111110110", "1111111110000100", "1111111110000101", "1111111110000110", "1111111110000111", "1111111110001000" },
-        { "11011", "11111000", "1111110111", "1111111110001001", "1111111110001010", "1111111110001011", "1111111110001100", "1111111110001101", "1111111110001110", "1111111110001111" },
-        { "111010", "111110111", "11111110111", "1111111110010000", "1111111110010001", "1111111110010010", "1111111110010011", "1111111110010100", "1111111110010101", "1111111110010110" },
-        { "111011", "1111111000", "1111111110010111", "1111111110011000", "1111111110011001", "1111111110011010", "1111111110011011", "1111111110011100", "1111111110011101", "1111111110011110" },
-        { "1111010", "1111111001", "1111111110011111", "1111111110100000", "1111111110100001", "1111111110100010", "1111111110100011", "1111111110100100", "1111111110100101", "1111111110100110" },
-        { "1111011", "11111111000", "1111111110100111", "1111111110101000", "1111111110101001", "1111111110101010", "1111111110101011", "1111111110101100", "1111111110101101", "1111111110101110" },
-        { "11111001", "11111111001", "1111111110101111", "1111111110110000", "1111111110110001", "1111111110110010", "1111111110110011", "1111111110110100", "1111111110110101", "1111111110110110" },
-        { "11111010", "111111111000000", "1111111110110111", "1111111110111000", "1111111110111001", "1111111110111010", "1111111110111011", "1111111110111100", "1111111110111101", "1111111110111110" },
-        { "111111000", "1111111110111111", "1111111111000000", "1111111111000001", "1111111111000010", "1111111111000011", "1111111111000100", "1111111111000101", "1111111111000110", "1111111111000111" },
-        { "111111001", "1111111111001000", "1111111111001001", "1111111111001010", "1111111111001011", "1111111111001100", "1111111111001101", "1111111111001110", "1111111111001111", "1111111111010000" },
-        { "111111010", "1111111111010001", "1111111111010010", "1111111111010011", "1111111111010100", "1111111111010101", "1111111111010110", "1111111111010111", "1111111111011000", "1111111111011001" },
-        { "1111111010", "1111111111011010", "1111111111011011", "1111111111011100", "1111111111011101", "1111111111011110", "1111111111011111", "1111111111100000", "1111111111100001", "1111111111100010" },
-        { "11111111010", "1111111111100011", "1111111111100100", "1111111111100101", "1111111111100110", "1111111111100111", "1111111111101000", "1111111111101001", "1111111111101010", "1111111111101011" },
-        { "111111110110", "1111111111101100", "1111111111101101", "1111111111101110", "1111111111101111", "1111111111110000", "1111111111110001", "1111111111110010", "1111111111110011", "1111111111110100" },
-        { "1111111111110101", "1111111111110110", "1111111111110111", "1111111111111000", "1111111111111001", "1111111111111010", "1111111111111011", "1111111111111100", "1111111111111101", "1111111111111110" },
-
-    }; 
-
-    if(zeros >= 0 && zeros <= 15 && categoria >= 0 && categoria <= 10)
-        return prefixos[zeros][categoria-1];
-
-    return "";
-
-}
-
-char* sufixoDCAC(int categoria, int valor) {
-
-    if(!categoria)
-        return "";
-
-    char *sufixo = calloc(categoria, sizeof(char));
-
-    if(valor == -1 || valor == 1) {
-    
-        if(valor == 1) sufixo[0] = '1';
-        else sufixo[0] = '0';
-
-        return sufixo;
-    
-    }
-
-    int min, cont = 0;
-
-    min = (pow(2, categoria) * -1) + 1;
-
-    if(valor > 0)
-        cont += min;
-
-    for(min; min < valor; min++)
-        cont++;
-
-    converterDeciBin(cont, sufixo, categoria);
-
-    return sufixo;
-
-}

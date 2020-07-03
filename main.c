@@ -55,6 +55,14 @@ int main() {
                 // printf("Insira o nome da imagem a ser comprimida:\n");
                 // scanf("%ms", &nomeArquivo);
 
+                int fatorCompressao;
+                printf("Insira o fator de compressão (1 a 3):\n");
+                scanf("%d", &fatorCompressao);
+
+                // Verificacao do fator
+                if(fatorCompressao < 1 || fatorCompressao > 3)
+                    finalizarPrograma("Fator de compressão fora dos limites.");
+
                 // Abertura dos arquivos de leitura e escrita
                 FILE *arquivo;
                 if((arquivo = fopen(nomeArquivo, "rb")) == NULL)
@@ -104,7 +112,7 @@ int main() {
                         iniciaRGB(&RGB);
                         leituraRGB(arquivo, RGB);
 
-                         // Inicializa a estrutura YCbCr e converte de RGB para YCbCr
+                        // Inicializa a estrutura YCbCr e converte de RGB para YCbCr
                         COMPRESSOR_YCBCR *YCbCr;
                         iniciaYCBCR(&YCbCr);
                         RGBparaYCBCR(RGB, YCbCr);
@@ -123,7 +131,7 @@ int main() {
                         // Aplica a quantizacao
                         COMPRESSOR_YCBCR *quantizada;
                         iniciaYCBCR(&quantizada);
-                        Quantizacao(quantizada, frequencias);
+                        Quantizacao(quantizada, frequencias, fatorCompressao);
                         liberaYCBCR(&frequencias);
 
                         // Vetoriza a matriz quantizada
@@ -149,13 +157,25 @@ int main() {
                         liberaMatriz(&vetorizados, WIDTH*HEIGHT);
 
                         // Codificacao estatistica e escrita dos dados no arquivo binario
-                        codificacaoEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC); 
+                        codificacaoEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC, fatorCompressao); 
                         liberaListas(&codificadosAC);     
 
                     }
 
                 }
                
+                long tamanhoArquivo = ftell(arquivo) / 1024;
+                long tamanhoGerado = ftell(arquivoGerado) / 1024;
+                float taxa = 100 - (((float)tamanhoGerado / (float)tamanhoArquivo) * 100.0);
+
+                int proporcaoOriginal = (float)tamanhoArquivo / (float)tamanhoGerado;
+                int proporcaoArquivo = 1;
+
+                printf("Tamanho da imagem original: %ldKB\n", tamanhoArquivo);
+                printf("Tamanho do arquivo comprimido: %ldKB\n", tamanhoGerado);
+                printf("Taxa de compressão: %.1f%%\n", taxa);
+                printf("Proporção: %d:%d\n\n", proporcaoOriginal, proporcaoArquivo);
+
                 // Fecha os arquivos
                 fclose(arquivoGerado);
                 fclose(arquivo);
@@ -170,6 +190,9 @@ int main() {
                 char* nomeArquivo = "comprimido.bin";
                 // printf("Insira o nome da imagem a ser descomprimida:\n");
                 // scanf("%ms", &nomeArquivo);
+
+                // Fator de compressao
+                int fatorCompressao;
 
                 // Abertura dos arquivos de leitura e escrita
                 FILE *arquivo;
@@ -219,7 +242,7 @@ int main() {
 
                         COMPRESSOR_LISTAS *codificadosAC;
                         iniciaListas(&codificadosAC);
-                        leituraEstatistica(arquivo, &DCY, &DCCb, &DCCr, codificadosAC);
+                        leituraEstatistica(arquivo, &DCY, &DCCb, &DCCr, codificadosAC, &fatorCompressao);
 
                         // Inverte o processo de run length
                         COMPRESSOR_MATRIZ *vetorizados;
@@ -249,7 +272,7 @@ int main() {
                         // Aplica a inversa da quantizada
                         COMPRESSOR_YCBCR *frequencias;
                         iniciaYCBCR(&frequencias);
-                        inversaQuantizada(quantizada, frequencias);
+                        inversaQuantizada(quantizada, frequencias, fatorCompressao);
                         liberaYCBCR(&quantizada);
 
                         // Aplica a inversa da transformada DCT
