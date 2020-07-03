@@ -81,7 +81,7 @@ int main() {
                 
                 }
 
-                // Cria uma nova imagem
+                // Cria o arquivo comprimido
                 FILE *arquivoGerado;
                 if((arquivoGerado = fopen("comprimido.bin", "w+b")) == NULL)
                     return 0;
@@ -112,7 +112,7 @@ int main() {
 
                         // Realiza o processo de downsampling
                         // TODO: o downsampling deve ficar fora do loop
-                        // DownSampling(&YCbCr);
+                        //DownSampling(&YCbCr);
 
                         // Aplica a transformada DCT
                         COMPRESSOR_YCBCR *frequencias;
@@ -134,9 +134,9 @@ int main() {
 
                         // Codificacao por diferenca dos coeficientes DC
                         int index = i*Height + j;
-                        int DCY = index == 0 ? getMatrizValue(vetorizados, 0, 0) : getMatrizValue(vetorizados, 0, 0) - ultimoDCY;
-                        int DCCb = index == 0 ? getMatrizValue(vetorizados, 1, 0) : getMatrizValue(vetorizados, 1, 0) - ultimoDCY;
-                        int DCCr = index == 0 ? getMatrizValue(vetorizados, 2, 0) : getMatrizValue(vetorizados, 2, 0) - ultimoDCY;
+                        int DCY = getMatrizValue(vetorizados, 0, 0) - ultimoDCY;
+                        int DCCb = getMatrizValue(vetorizados, 1, 0) - ultimoDCCb;
+                        int DCCr = getMatrizValue(vetorizados, 2, 0) - ultimoDCCr;
 
                         ultimoDCY = getMatrizValue(vetorizados, 0, 0);
                         ultimoDCCb = getMatrizValue(vetorizados, 1, 0);
@@ -149,8 +149,8 @@ int main() {
                         liberaMatriz(&vetorizados, WIDTH*HEIGHT);
 
                         // Codificacao estatistica e escrita dos dados no arquivo binario
-                        codificacaoEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC);
-                        liberaListas(&codificadosAC);                      
+                        codificacaoEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC); 
+                        liberaListas(&codificadosAC);     
 
                     }
 
@@ -215,34 +215,58 @@ int main() {
 
                     for(int j=0; j<Width/8; j++) {
 
-                        int *DCY, *DCCb, *DCCr;
+                        int DCY, DCCb, DCCr;
 
                         COMPRESSOR_LISTAS *codificadosAC;
                         iniciaListas(&codificadosAC);
-                        leituraEstatistica(arquivoGerado, DCY, DCCb, DCCr, codificadosAC);
+                        leituraEstatistica(arquivo, &DCY, &DCCb, &DCCr, codificadosAC);
+
+                        // Inverte o processo de run length
+                        COMPRESSOR_MATRIZ *vetorizados;
+                        iniciaMatriz(&vetorizados, WIDTH*HEIGHT);
+                        inversaRunLength(vetorizados, codificadosAC);
+                        liberaListas(&codificadosAC);
+
+                        // Define os DCs
+                        DCY += ultimoDCY;
+                        DCCb += ultimoDCCb;
+                        DCCr += ultimoDCCr;
+
+                        ultimoDCY = DCY;
+                        ultimoDCCb = DCCb;
+                        ultimoDCCr = DCCr;
+
+                        setMatrizValue(vetorizados, 0, 0, DCY);
+                        setMatrizValue(vetorizados, 1, 0, DCCb);
+                        setMatrizValue(vetorizados, 2, 0, DCCr);
 
                         // Inverte a vetorizacao
-                        // iniciaYCBCR(&quantizada);
-                        // inversaVetorizacao(quantizada, vetorizados);
-                        // liberaMatriz(&vetorizados, WIDTH*HEIGHT);
+                        COMPRESSOR_YCBCR *quantizada;
+                        iniciaYCBCR(&quantizada);
+                        inversaVetorizacao(quantizada, vetorizados);
+                        liberaMatriz(&vetorizados, WIDTH*HEIGHT);
 
                         // Aplica a inversa da quantizada
-                        // iniciaYCBCR(&frequencias);
-                        // inversaQuantizada(quantizada, frequencias);
-                        // liberaYCBCR(&quantizada);
+                        COMPRESSOR_YCBCR *frequencias;
+                        iniciaYCBCR(&frequencias);
+                        inversaQuantizada(quantizada, frequencias);
+                        liberaYCBCR(&quantizada);
 
                         // Aplica a inversa da transformada DCT
-                        // iniciaYCBCR(&YCbCr);
-                        // inversaDCT(frequencias, YCbCr);
-                        // iniciaYCBCR(&frequencias);
+                        COMPRESSOR_YCBCR *YCbCr;
+                        iniciaYCBCR(&YCbCr);
+                        inversaDCT(frequencias, YCbCr);
+                        iniciaYCBCR(&frequencias);
 
                         // Converte de YCbCr para RGB e Escreve a matriz de cores no formato RGB
-                        // iniciaRGB(&RGB);
-                        // YCBCRparaRGB(RGB, YCbCr);
-                        // liberaYCBCR(&YCbCr);
+                        BITMAP_RGB *RGB;
+                        iniciaRGB(&RGB);
+                        YCBCRparaRGB(RGB, YCbCr);
+                        liberaYCBCR(&YCbCr);
                         
-                        // escreveRGB(arquivoGerado, RGB);
-                        // liberaRGB(&RGB);  
+                        // Escreve os dados da data unit
+                        escreveRGB(arquivoGerado, RGB);
+                        liberaRGB(&RGB);                
 
                     }
 

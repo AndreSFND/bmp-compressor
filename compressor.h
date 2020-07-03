@@ -49,6 +49,7 @@
         void inversaVetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados);
 
         void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC);
+        void inversaRunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC);
         
         void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC);
         void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC);
@@ -57,5 +58,6 @@
         char* prefixoDC(int categoria);
         char* prefixoAC(int zeros, int categoria);
         char* sufixoDCAC(int categoria, int valor);
+        void Teste();
 
 #endif

@@ -24,9 +24,9 @@ struct compressorycbcr {
 
 struct compressormatriz {
 
-    int *vetorY;
-    int *vetorCb;
-    int *vetorCr;
+    float *vetorY;
+    float *vetorCb;
+    float *vetorCr;
 
     int length;
 
@@ -493,9 +493,9 @@ void Vetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados) {
 
     for(int i=0; i<HEIGHT*WIDTH; i++) {
 
-        vetorizados->vetorY[i] = (int) quantizada->Y[y][x];
-        vetorizados->vetorCb[i] = (int) quantizada->Cb[y][x];
-        vetorizados->vetorCr[i] = (int) quantizada->Cr[y][x];
+        vetorizados->vetorY[i] = quantizada->Y[y][x];
+        vetorizados->vetorCb[i] = quantizada->Cb[y][x];
+        vetorizados->vetorCr[i] = quantizada->Cr[y][x];
 
         // Direita
         if((y == 0 || y == HEIGHT-1) && x < WIDTH-1  && x % 2 == 0) {
@@ -576,13 +576,144 @@ void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC)
     for(int i=1; i<HEIGHT*WIDTH; i++) {
 
         if(vetorizados->vetorY[i] == 0) zerosY++;
-        else Lista_Inserir(codificadosAC->listaY, zerosY, vetorizados->vetorY[i], categoriaCoeficiente(vetorizados->vetorY[i]));
+        else {
+            Lista_Inserir(codificadosAC->listaY, zerosY, vetorizados->vetorY[i], categoriaCoeficiente(vetorizados->vetorY[i]));
+            zerosY = 0;
+        }
 
         if(vetorizados->vetorCb[i] == 0) zerosCb++;
-        else Lista_Inserir(codificadosAC->listaCb, zerosCb, vetorizados->vetorCb[i], categoriaCoeficiente(vetorizados->vetorCb[i]));
+        else {
+            Lista_Inserir(codificadosAC->listaCb, zerosCb, vetorizados->vetorCb[i], categoriaCoeficiente(vetorizados->vetorCb[i]));
+            zerosCb = 0;
+        }
 
         if(vetorizados->vetorCr[i] == 0) zerosCr++;
-        else Lista_Inserir(codificadosAC->listaY, zerosCr, vetorizados->vetorCr[i], categoriaCoeficiente(vetorizados->vetorCr[i]));
+        else {
+            Lista_Inserir(codificadosAC->listaCr, zerosCr, vetorizados->vetorCr[i], categoriaCoeficiente(vetorizados->vetorCr[i]));
+            zerosCr = 0;
+        }
+
+    }
+
+}
+
+void inversaRunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC) {
+
+    int zerosY = 0,  zerosCb = 0, zerosCr = 0;
+    int valorY = -1,  valorCb = -1, valorCr = -1;
+    int valorYFoiUtilizado = 1, valorCbFoiUtilizado = 1, valorCrFoiUtilizado = 1;
+
+    NO* noY = Lista_No(codificadosAC->listaY, 0);
+    NO* noCb = Lista_No(codificadosAC->listaCb, 0);
+    NO* noCr = Lista_No(codificadosAC->listaCr, 0);
+
+    if(noY != NULL) {
+        
+        valorY = Lista_No_Valor(noY);
+        zerosY = Lista_No_Zeros(noY);
+        valorYFoiUtilizado = 0;
+
+        noY = Lista_No_Proximo(noY);
+    
+    } 
+    if(noCb != NULL) {
+        
+        valorCb = Lista_No_Valor(noCb);
+        zerosCb = Lista_No_Zeros(noCb);
+        valorCbFoiUtilizado = 0;
+
+        noCb = Lista_No_Proximo(noCb);
+    
+    }
+    if(noCr != NULL) {
+        
+        valorCr = Lista_No_Valor(noCr);
+        zerosCr = Lista_No_Zeros(noCr);
+        valorCrFoiUtilizado = 0;
+
+        noCr = Lista_No_Proximo(noCr);
+    
+    }
+
+    for(int i=1; i<HEIGHT*WIDTH; i++) {
+
+        if(zerosY > 0) {
+
+            vetorizados->vetorY[i] = 0;
+            zerosY--;
+
+        } else if(!valorYFoiUtilizado) {
+
+            vetorizados->vetorY[i] = valorY;
+            valorYFoiUtilizado = 1;
+
+            if(noY != NULL) {
+        
+                valorY = Lista_No_Valor(noY);
+                zerosY = Lista_No_Zeros(noY);
+                valorYFoiUtilizado = 0;
+
+                noY = Lista_No_Proximo(noY);
+            
+            }
+
+        } else {
+
+            vetorizados->vetorY[i] = 0;
+
+        }
+
+        if(zerosCb > 0) {
+
+            vetorizados->vetorCb[i] = 0;
+            zerosCb--;
+
+        } else if(!valorCbFoiUtilizado) {
+
+            vetorizados->vetorCb[i] = valorCb;
+            valorCbFoiUtilizado = 1;
+
+            if(noCb != NULL) {
+        
+                valorCb = Lista_No_Valor(noCb);
+                zerosCb = Lista_No_Zeros(noCb);
+                valorCbFoiUtilizado = 0;
+
+                noCb = Lista_No_Proximo(noCb);
+            
+            }
+
+        } else {
+
+            vetorizados->vetorCb[i] = 0;
+
+        }
+
+        if(zerosCr > 0) {
+
+            vetorizados->vetorCr[i] = 0;
+            zerosCr--;
+
+        } else if(!valorCrFoiUtilizado) {
+
+            vetorizados->vetorCr[i] = valorCr;
+            valorCrFoiUtilizado = 1;
+
+            if(noCr != NULL) {
+        
+                valorCr = Lista_No_Valor(noCr);
+                zerosCr = Lista_No_Zeros(noCr);
+                valorCrFoiUtilizado = 0;
+
+                noCr = Lista_No_Proximo(noCr);
+            
+            }
+
+        } else {
+
+            vetorizados->vetorCr[i] = 0;
+
+        }
 
     }
 
@@ -591,9 +722,12 @@ void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC)
 void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC) {
 
     int i, length;
-    unsigned char buffer = 0; // ocupa um byte de espaco de memoria*/
+    int buffer = 0; // ocupa 4 bytes de espaco de memoria*/
+    unsigned char categoria;
+    char *fim = "1010";
 
     // Calcula o codigo de DC em Y
+    categoria = (unsigned char) categoriaCoeficiente(DCY);
     char *_prefixoDC = prefixoDC(categoriaCoeficiente(DCY));
     char *_sufixoDC = sufixoDCAC(categoriaCoeficiente(DCY), DCY);
 
@@ -608,10 +742,12 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
     for (i = 0; i < length; i++) 
         buffer = (buffer << 1) | (codigo[i] == '1');
 
+    fwrite(&categoria, sizeof(unsigned char), 1, file);
     fwrite(&buffer, sizeof(buffer), 1, file);
     free(codigo);
 
     // Calcula o codigo de DC em Cb
+    categoria = (unsigned char) categoriaCoeficiente(DCCb);
     _prefixoDC = prefixoDC(categoriaCoeficiente(DCCb));
     _sufixoDC = sufixoDCAC(categoriaCoeficiente(DCCb), DCCb);
 
@@ -626,17 +762,19 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
     for (i = 0; i < length; i++) 
         buffer = (buffer << 1) | (codigo[i] == '1');
 
+    fwrite(&categoria, sizeof(unsigned char), 1, file);
     fwrite(&buffer, sizeof(buffer), 1, file);
     free(codigo);
 
     // Calcula o codigo de DC em Cr
+    categoria = (unsigned char) categoriaCoeficiente(DCCr);
     _prefixoDC = prefixoDC(categoriaCoeficiente(DCCr));
     _sufixoDC = sufixoDCAC(categoriaCoeficiente(DCCr), DCCr);
 
     length = strlen(_prefixoDC) + strlen(_sufixoDC);
 
     codigo = calloc(length, sizeof(char));
-    strcat(codigo, _sufixoDC);
+    strcat(codigo, _prefixoDC);
     strcat(codigo, _sufixoDC);
 
     // Transfere o conteudo do bitstream para um byte
@@ -644,12 +782,14 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
     for (i = 0; i < length; i++) 
         buffer = (buffer << 1) | (codigo[i] == '1');
 
+    fwrite(&categoria, sizeof(unsigned char), 1, file);
     fwrite(&buffer, sizeof(buffer), 1, file);
     free(codigo);
 
     NO *no = Lista_No(codificadosAC->listaY, 0);
     while (no != NULL) {
 
+        categoria = (unsigned char) Lista_No_Categoria(no);
         char *_prefixoAC = prefixoAC(Lista_No_Zeros(no), Lista_No_Categoria(no));
         char *_sufixoAC = sufixoDCAC(Lista_No_Categoria(no), Lista_No_Valor(no));
 
@@ -664,13 +804,15 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
         for (i = 0; i < length; i++) 
             buffer = (buffer << 1) | (codigoAC[i] == '1');
 
+        fwrite(&categoria, sizeof(unsigned char), 1, file);
         fwrite(&buffer, sizeof(buffer), 1, file);
         free(codigoAC);
 
         no = Lista_No_Proximo(no);
+
     }
 
-    char *fim = "1010";
+    categoria = '0';
     length = strlen(fim);
 
     // Transfere o conteudo do bitstream para um byte
@@ -678,127 +820,352 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
     for (i = 0; i < length; i++) 
         buffer = (buffer << 1) | (fim[i] == '1');
 
+    fwrite(&categoria, sizeof(unsigned char), 1, file);
+    fwrite(&buffer, sizeof(buffer), 1, file);
+
+    no = Lista_No(codificadosAC->listaCb, 0);
+    while (no != NULL) {
+
+        categoria = (unsigned char) Lista_No_Categoria(no);
+        char *_prefixoAC = prefixoAC(Lista_No_Zeros(no), Lista_No_Categoria(no));
+        char *_sufixoAC = sufixoDCAC(Lista_No_Categoria(no), Lista_No_Valor(no));
+
+        length = strlen(_prefixoAC) + strlen(_sufixoAC);
+
+        char *codigoAC = calloc(length, sizeof(char));
+        strcat(codigoAC, _prefixoAC);
+        strcat(codigoAC, _sufixoAC);
+
+        // Transfere o conteudo do bitstream para um byte
+        buffer = 0;
+        for (i = 0; i < length; i++) 
+            buffer = (buffer << 1) | (codigoAC[i] == '1');
+
+        fwrite(&categoria, sizeof(unsigned char), 1, file);
+        fwrite(&buffer, sizeof(buffer), 1, file);
+        free(codigoAC);
+
+        no = Lista_No_Proximo(no);
+
+    }
+
+    categoria = '0';
+    length = strlen(fim);
+
+    // Transfere o conteudo do bitstream para um byte
+    buffer = 0;
+    for (i = 0; i < length; i++) 
+        buffer = (buffer << 1) | (fim[i] == '1');
+
+    fwrite(&categoria, sizeof(unsigned char), 1, file);
+    fwrite(&buffer, sizeof(buffer), 1, file);
+
+    no = Lista_No(codificadosAC->listaCr, 0);
+    while (no != NULL) {
+
+        categoria = (unsigned char) Lista_No_Categoria(no);
+        char *_prefixoAC = prefixoAC(Lista_No_Zeros(no), Lista_No_Categoria(no));
+        char *_sufixoAC = sufixoDCAC(Lista_No_Categoria(no), Lista_No_Valor(no));
+
+        length = strlen(_prefixoAC) + strlen(_sufixoAC);
+
+        char *codigoAC = calloc(length, sizeof(char));
+        strcat(codigoAC, _prefixoAC);
+        strcat(codigoAC, _sufixoAC);
+
+        // Transfere o conteudo do bitstream para um byte
+        buffer = 0;
+        for (i = 0; i < length; i++) 
+            buffer = (buffer << 1) | (codigoAC[i] == '1');
+
+        fwrite(&categoria, sizeof(unsigned char), 1, file);
+        fwrite(&buffer, sizeof(buffer), 1, file);
+        free(codigoAC);
+
+        no = Lista_No_Proximo(no);
+
+    }
+
+    categoria = '0';
+    length = strlen(fim);
+
+    // Transfere o conteudo do bitstream para um byte
+    buffer = 0;
+    for (i = 0; i < length; i++) 
+        buffer = (buffer << 1) | (fim[i] == '1');
+
+    fwrite(&categoria, sizeof(unsigned char), 1, file);
     fwrite(&buffer, sizeof(buffer), 1, file);
 
 }
 
-void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC) {
+char *strrev(char *str) {
+      char *p1, *p2;
 
-    fread(DCY, sizeof (int), 1, file);
-    fread(DCCb, sizeof (int), 1, file);
-    fread(DCCr, sizeof (int), 1, file);
+      if (! str || ! *str)
+            return str;
+      for (p1 = str, p2 = str + strlen(str) - 1; p2 > p1; ++p1, --p2) {
+            *p1 ^= *p2;
+            *p2 ^= *p1;
+            *p1 ^= *p2;
+      }
+      return str;
+}
 
-    int *buffer;
+void converterDeciBin(int deci, char *bin, int tamanho) {
 
-    while( *buffer != 10 ) {
+    for(int i=0; i<tamanho; i++) {
 
-        fread(buffer, sizeof(int), 1, file);
+        bin[i] = (deci % 2) + '0';
+        deci /= 2;
+    
+    }
 
-        if(*buffer != 10) {
+    bin = strrev(bin);
 
-            char *codigo = calloc(sizeof(int)*8, sizeof(char));
+}
 
-            converterDeciBin(buffer, codigo, sizeof(int)*8);
+void converterBinDeci(char *bin, int *deci) {
 
-            Lista_Inserir();
+    *deci = 0;
+
+    char *inverso = strrev(bin);
+
+    for(int i=0; i < strlen(inverso); i++)
+        if(inverso[i] == '1')
+            *deci += pow(2, i);
+
+}
+
+void inverteSufixoDCAC(char *sufixo, int categoria, int *valor) {
+
+    if(!sufixo)
+        *valor = -1;
+    else {
+
+        converterBinDeci(sufixo, valor);
+
+        int count = *valor;
+        int min = (pow(2, categoria) * -1) + 1;
+
+        int v = min + count;
+        if(v > (pow(2, categoria-1) * -1))
+            v = v - min;
+
+        *valor = v;
+
+    }
+
+}
+
+int invertePrefixoDC(char *prefixo) {
+
+    char* prefixos[11] = {
+
+        "010",
+        "011",
+        "100",
+        "00",
+        "101",
+        "110",
+        "1110",
+        "11110",
+        "111110",
+        "1111110",
+        "11111110"
+
+    };
+
+    for(int i = 0; i < 12; i++) if(!strcmp(prefixo, prefixos[i]))
+        return i;
         
+    return -1;
+
+}
+
+void invertePrefixoAC(char *prefixo, int *zeros, int *categoria) {
+
+    char* prefixos[16][10] = {
+
+        { "00", "01", "100", "1011", "11010", "111000", "1111000", "1111110110", "1111111110000010", "1111111110000011" },
+        { "1100", "111001", "1111001", "111110110", "11111110110", "1111111110000100", "1111111110000101", "1111111110000110", "1111111110000111", "1111111110001000" },
+        { "11011", "11111000", "1111110111", "1111111110001001", "1111111110001010", "1111111110001011", "1111111110001100", "1111111110001101", "1111111110001110", "1111111110001111" },
+        { "111010", "111110111", "11111110111", "1111111110010000", "1111111110010001", "1111111110010010", "1111111110010011", "1111111110010100", "1111111110010101", "1111111110010110" },
+        { "111011", "1111111000", "1111111110010111", "1111111110011000", "1111111110011001", "1111111110011010", "1111111110011011", "1111111110011100", "1111111110011101", "1111111110011110" },
+        { "1111010", "1111111001", "1111111110011111", "1111111110100000", "1111111110100001", "1111111110100010", "1111111110100011", "1111111110100100", "1111111110100101", "1111111110100110" },
+        { "1111011", "11111111000", "1111111110100111", "1111111110101000", "1111111110101001", "1111111110101010", "1111111110101011", "1111111110101100", "1111111110101101", "1111111110101110" },
+        { "11111001", "11111111001", "1111111110101111", "1111111110110000", "1111111110110001", "1111111110110010", "1111111110110011", "1111111110110100", "1111111110110101", "1111111110110110" },
+        { "11111010", "111111111000000", "1111111110110111", "1111111110111000", "1111111110111001", "1111111110111010", "1111111110111011", "1111111110111100", "1111111110111101", "1111111110111110" },
+        { "111111000", "1111111110111111", "1111111111000000", "1111111111000001", "1111111111000010", "1111111111000011", "1111111111000100", "1111111111000101", "1111111111000110", "1111111111000111" },
+        { "111111001", "1111111111001000", "1111111111001001", "1111111111001010", "1111111111001011", "1111111111001100", "1111111111001101", "1111111111001110", "1111111111001111", "1111111111010000" },
+        { "111111010", "1111111111010001", "1111111111010010", "1111111111010011", "1111111111010100", "1111111111010101", "1111111111010110", "1111111111010111", "1111111111011000", "1111111111011001" },
+        { "1111111010", "1111111111011010", "1111111111011011", "1111111111011100", "1111111111011101", "1111111111011110", "1111111111011111", "1111111111100000", "1111111111100001", "1111111111100010" },
+        { "11111111010", "1111111111100011", "1111111111100100", "1111111111100101", "1111111111100110", "1111111111100111", "1111111111101000", "1111111111101001", "1111111111101010", "1111111111101011" },
+        { "111111110110", "1111111111101100", "1111111111101101", "1111111111101110", "1111111111101111", "1111111111110000", "1111111111110001", "1111111111110010", "1111111111110011", "1111111111110100" },
+        { "1111111111110101", "1111111111110110", "1111111111110111", "1111111111111000", "1111111111111001", "1111111111111010", "1111111111111011", "1111111111111100", "1111111111111101", "1111111111111110" },
+
+    };
+
+    if(!strcmp(prefixo, "1010")) {
+
+        *zeros = 0;
+        *categoria = 0;
+    
+    } else if(!strcmp(prefixo, "111111110111")) {
+
+        *zeros = 15;
+        *categoria = 0;
+
+    } else {
+
+        for(int i = 0; i < 16; i++) {
+
+            for(int j = 0; j < 10; j++) {
+
+                if(!strcmp(prefixos[i][j], prefixo)) {
+
+                    *zeros = i;
+                    *categoria = j-1;
+
+                }
+
+            }
+            
         }
 
     }
 
-    int i, length;
-    int buffer = 0; // ocupa um byte de espaco de memoria*/
+}
 
-    // Calcula o codigo de DC em Y
-    char *_prefixoDC = prefixoDC(categoriaCoeficiente(DCY));
-    char *_sufixoDC = sufixoDCAC(categoriaCoeficiente(DCY), DCY);
+void converteDC(int categoria, int DC, int *valor) {
 
-    length = strlen(_prefixoDC) + strlen(_sufixoDC);
+    char* codigo = calloc((sizeof(int)*8), sizeof(char));
+    converterDeciBin(DC, codigo, (sizeof(int)*8));
 
-    char *codigo = calloc(length, sizeof(char));
-    strcat(codigo, _prefixoDC);
-    strcat(codigo, _sufixoDC);
+    char* prefixo = calloc( (sizeof(int)*8) - categoria, sizeof(char) );
+    char* _sufixo = calloc( categoria, sizeof(char) );
 
-    // Transfere o conteudo do bitstream para um byte
-    buffer = 0;
-    for (i = 0; i < length; i++)
-        buffer = (buffer << 1) | (codigo[i] == '1');
+    strncpy(prefixo, codigo, (sizeof(int)*8) - categoria);
+    strncpy(_sufixo, &codigo[strlen(codigo) - categoria], categoria);
 
-    fwrite(&buffer, sizeof(buffer), 1, file);
-    free(codigo);
+    char *_prefixo;
+    int length;
 
-    // Calcula o codigo de DC em Cb
-    _prefixoDC = prefixoDC(categoriaCoeficiente(DCCb));
-    _sufixoDC = sufixoDCAC(categoriaCoeficiente(DCCb), DCCb);
+    for(int i=0; i<sizeof(int)*8; i++) if(prefixo[i] == '1' || i >= strlen(prefixo)-2) {
 
-    length = strlen(_prefixoDC) + strlen(_sufixoDC);
+        length = (sizeof(int)*8) - i;
 
-    codigo = calloc(length, sizeof(char));
-    strcat(codigo, _prefixoDC);
-    strcat(codigo, _sufixoDC);
+        _prefixo = calloc(length, sizeof(char));
+        strcpy(_prefixo, &prefixo[i]);
 
-    // Transfere o conteudo do bitstream para um byte
-    buffer = 0;
-    for (i = 0; i < length; i++) 
-        buffer = (buffer << 1) | (codigo[i] == '1');
+        break;
 
-    fwrite(&buffer, sizeof(buffer), 1, file);
-    free(codigo);
-
-    // Calcula o codigo de DC em Cr
-    _prefixoDC = prefixoDC(categoriaCoeficiente(DCCr));
-    _sufixoDC = sufixoDCAC(categoriaCoeficiente(DCCr), DCCr);
-
-    length = strlen(_prefixoDC) + strlen(_sufixoDC);
-
-    codigo = calloc(length, sizeof(char));
-    strcat(codigo, _sufixoDC);
-    strcat(codigo, _sufixoDC);
-
-    // Transfere o conteudo do bitstream para um byte
-    buffer = 0;
-    for (i = 0; i < length; i++) 
-        buffer = (buffer << 1) | (codigo[i] == '1');
-
-    fwrite(&buffer, sizeof(buffer), 1, file);
-    free(codigo);
-
-    NO *no = Lista_No(codificadosAC->listaY, 0);
-    while (no != NULL) {
-
-        char *_prefixoAC = prefixoAC(Lista_No_Zeros(no), Lista_No_Categoria(no));
-        char *_sufixoAC = sufixoDCAC(Lista_No_Categoria(no), Lista_No_Valor(no));
-
-        length = strlen(_prefixoAC) + strlen(_sufixoAC);
-
-        char *codigoAC = calloc(length, sizeof(char));
-        strcat(codigoAC, _prefixoAC);
-        strcat(codigoAC, _sufixoAC);
-
-        // Transfere o conteudo do bitstream para um byte
-        buffer = 0;
-        for (i = 0; i < length; i++) 
-            buffer = (buffer << 1) | (codigoAC[i] == '1');
-
-        fwrite(&buffer, sizeof(buffer), 1, file);
-        free(codigoAC);
-
-        no = Lista_No_Proximo(no);
     }
 
-    char *fim = "1010";
-    length = strlen(fim);
+    inverteSufixoDCAC(_sufixo, categoria, valor);
 
-    // Transfere o conteudo do bitstream para um byte
-    buffer = 0;
-    for (i = 0; i < length; i++) 
-        buffer = (buffer << 1) | (fim[i] == '1');
-
-    fwrite(&buffer, sizeof(buffer), 1, file);
+    free(prefixo); free(_prefixo); free(_sufixo); free(codigo);
 
 }
 
+void converteAC(int categoria, int AC, int *valor, int *zeros) {
 
+    char* codigo = calloc(sizeof(int)*8, sizeof(char));
+    converterDeciBin(AC, codigo, (sizeof(int)*8));
+
+    char* prefixo = calloc( (sizeof(int)*8) - categoria, sizeof(char) );
+    char* _sufixo = calloc( categoria, sizeof(char) );
+
+    strncpy(prefixo, codigo, (sizeof(int)*8) - categoria);
+    strncpy(_sufixo, &codigo[strlen(codigo) - categoria], categoria);
+
+    char *_prefixo;
+    int length;
+
+    for(int i=0; i<sizeof(int)*8; i++) if(prefixo[i] == '1' || i >= strlen(prefixo)-2) {
+
+        length = (sizeof(int)*8) - i;
+
+        _prefixo = calloc(length, sizeof(char));
+        strcpy(_prefixo, &prefixo[i]);
+
+        break;
+
+    }
+
+    int tmp;
+
+    invertePrefixoAC(_prefixo, zeros, &tmp);
+    inverteSufixoDCAC(_sufixo, categoria, valor);
+
+    free(prefixo); 
+    free(_prefixo);
+    free(_sufixo); 
+    free(codigo);
+
+} 
+
+void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC) {
+
+    unsigned char categoria;
+    char *prefixo, *sufixo;
+    int codigo, zeros, valor;
+
+    fread(&categoria, sizeof(unsigned char), 1, file);
+    fread(&codigo, sizeof(int), 1, file);
+    converteDC((int)categoria, codigo, DCY);
+
+    fread(&categoria, sizeof(unsigned char), 1, file);
+    fread(&codigo, sizeof(int), 1, file);
+    converteDC((int)categoria, codigo, DCCb);
+    
+    fread(&categoria, sizeof(unsigned char), 1, file);
+    fread(&codigo, sizeof(int), 1, file);
+    converteDC((int)categoria, codigo, DCCr);
+
+    codigo = 0;
+
+    while( codigo != 10 ) {
+
+        fread(&categoria, sizeof(unsigned char), 1, file);
+        fread(&codigo, sizeof(int), 1, file);
+
+        if(codigo == 10) break;
+
+        converteAC((int)categoria, codigo, &valor, &zeros);
+        Lista_Inserir(codificadosAC->listaY, zeros, valor, categoria);
+
+    }
+
+    codigo = 0;
+
+    while( codigo != 10 ) {
+
+        fread(&categoria, sizeof(unsigned char), 1, file);
+        fread(&codigo, sizeof(int), 1, file);
+
+        if(codigo == 10) break;
+
+        converteAC((int)categoria, codigo, &valor, &zeros);
+        Lista_Inserir(codificadosAC->listaCb, zeros, valor, categoria);
+
+    }
+
+    codigo = 0;
+
+    while( codigo != 10 ) {
+
+        fread(&categoria, sizeof(unsigned char), 1, file);
+        fread(&codigo, sizeof(int), 1, file);
+        
+        if(codigo == 10) break;
+
+        converteAC((int)categoria, codigo, &valor, &zeros);
+        Lista_Inserir(codificadosAC->listaCr, zeros, valor, categoria);
+
+    }
+
+}
 
 int categoriaCoeficiente(float coeficiente) {
 
@@ -877,32 +1244,6 @@ char* prefixoAC(int zeros, int categoria) {
 
 }
 
-char *strrev(char *str) {
-      char *p1, *p2;
-
-      if (! str || ! *str)
-            return str;
-      for (p1 = str, p2 = str + strlen(str) - 1; p2 > p1; ++p1, --p2) {
-            *p1 ^= *p2;
-            *p2 ^= *p1;
-            *p1 ^= *p2;
-      }
-      return str;
-}
-
-void converterDeciBin(int deci, char *bin, int tamanho) {
-
-    for(int i=0; i<tamanho; i++) {
-
-        bin[i] = (deci % 2) + '0';
-        deci /= 2;
-    
-    }
-
-    bin = strrev(bin);
-
-}
-
 char* sufixoDCAC(int categoria, int valor) {
 
     if(!categoria)
@@ -912,8 +1253,8 @@ char* sufixoDCAC(int categoria, int valor) {
 
     if(valor == -1 || valor == 1) {
     
-        if(valor == 1)
-            sufixo[0] = '1';
+        if(valor == 1) sufixo[0] = '1';
+        else sufixo[0] = '0';
 
         return sufixo;
     

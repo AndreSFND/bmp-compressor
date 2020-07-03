@@ -29,7 +29,7 @@ struct lista_ {
 struct no_ {
 
     int zeros;
-    int valor;
+    float valor;
     int categoria;
 
     NO *proximo;
@@ -121,7 +121,7 @@ bool Lista_Cheia(LISTA *Lista) {
  * 
  * @returns bool booleano que informa se o vertice foi inserido
 */
-bool Lista_Inserir(LISTA *Lista, int zeros, int valor, int categoria) {
+bool Lista_Inserir(LISTA *Lista, int zeros, float valor, int categoria) {
 
     if(!Lista_Cheia(Lista) && Lista != NULL){
 
@@ -207,7 +207,7 @@ int Lista_No_Zeros(NO *No) {
 
 }
 
-int Lista_No_Valor(NO *No) {
+float Lista_No_Valor(NO *No) {
 
     if(No != NULL)
         return No->valor;
