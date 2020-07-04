@@ -59,6 +59,12 @@ void invertePrefixoAC(char *prefixo, int *zeros, int *categoria);
 void converteDC(int categoria, int DC, int *valor);
 void converteAC(int categoria, int AC, int *valor, int *zeros);
 
+/**
+ * Inicializa as listas
+ * 
+ * @param COMPRESSOR_LISTAS **Listas
+ * 
+*/
 void iniciaListas(COMPRESSOR_LISTAS **Listas) {
 
     *Listas = malloc(sizeof(COMPRESSOR_LISTAS));
@@ -69,6 +75,12 @@ void iniciaListas(COMPRESSOR_LISTAS **Listas) {
 
 }
 
+/**
+ * Libera as listas da memoria
+ * 
+ * @param COMPRESSOR_LISTAS **Listas
+ * 
+*/
 void liberaListas(COMPRESSOR_LISTAS **Listas) {
 
     Lista_Apagar( &((*Listas)->listaY) );
@@ -79,6 +91,13 @@ void liberaListas(COMPRESSOR_LISTAS **Listas) {
 
 }
 
+/**
+ * Inicializa a matriz
+ * 
+ * @param COMPRESSOR_MATRIZ **Matriz
+ * @param int length tamanho da matriz
+ * 
+*/
 void iniciaMatriz(COMPRESSOR_MATRIZ **Matriz, int length) {
 
     *Matriz = malloc(sizeof(COMPRESSOR_MATRIZ));
@@ -89,6 +108,13 @@ void iniciaMatriz(COMPRESSOR_MATRIZ **Matriz, int length) {
 
 }
 
+/**
+ * Libera a matriz
+ * 
+ * @param COMPRESSOR_MATRIZ **Matriz
+ * @param int length tamanho da matriz
+ * 
+*/
 void liberaMatriz(COMPRESSOR_MATRIZ **Matriz, int length) {
 
     free((*Matriz)->vetorY);
@@ -99,6 +125,15 @@ void liberaMatriz(COMPRESSOR_MATRIZ **Matriz, int length) {
 
 }
 
+/**
+ * Devolve valor da matriz
+ * 
+ * @param COMPRESSOR_MATRIZ *Matriz
+ * @param int which qual
+ * @param int index
+ * 
+ * @returns int valor
+*/
 int getMatrizValue(COMPRESSOR_MATRIZ *Matriz, int which, int index) {
 
     int value;
@@ -115,6 +150,15 @@ int getMatrizValue(COMPRESSOR_MATRIZ *Matriz, int which, int index) {
 
 }
 
+/**
+ * Seta valor da matriz
+ * 
+ * @param COMPRESSOR_MATRIZ *Matriz
+ * @param int which qual
+ * @param int index
+ * @param int value valor
+ * 
+*/
 void setMatrizValue(COMPRESSOR_MATRIZ *Matriz, int which, int index, int value) {
 
     switch(which) {
@@ -382,6 +426,12 @@ void transformadaDCT(COMPRESSOR_YCBCR *frequencias, COMPRESSOR_YCBCR *YCbCr) {
 
 }
 
+/**
+ * Inverso do processo DCT para fazer o caminho de volta
+ * 
+ * @param COMPRESSOR_YCBCR *frequencias estrutura de dados da matriz de frequencias
+ * @param COMPRESSOR_YCBCR *YCbCr estrutura de dados das cores no formato YCbCr
+*/
 void inversaDCT(COMPRESSOR_YCBCR *frequencias, COMPRESSOR_YCBCR *YCbCr) {
 
     // Monta a matriz YCbCr a partir da matriz de frequencias
@@ -496,6 +546,13 @@ void Quantizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias, in
 
 }
 
+/**
+ * Inverso da quantizacao para fazer o caminho de volta da compressao
+ * 
+ * @param COMPRESSOR_YCBCR *frequencias estrutura de dados da matriz de frequencias
+ * @param COMPRESSOR_YCBCR *quantizada estrutura de dados da quantificacao
+ * @param int fatorCompressao fator usado na compressao
+*/
 void inversaQuantizada(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias, int fatorCompressao) {
 
     // Fator de compressao
@@ -666,6 +723,12 @@ void Vetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados) {
 
 }
 
+/**
+ * Inverso da montagem dos vetores ordenados em zig zag (vetorizacao)
+ * 
+ * @param COMPRESSOR_YCBCR *quantizada estrutura de dados da matriz quantizada
+ * @param COMPRESSOR_MATRIZ *vetorizados estrutura de dados da matriz vetorizada
+*/
 void inversaVetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados) {
 
     int x = 0, y = 0;
@@ -707,6 +770,12 @@ void inversaVetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetoriz
 
 }
 
+/**
+ * Funcao para codificacao por carreira
+ * 
+ * @param COMPRESSOR_YCBCR *vetorizados estrutura de dados da matriz quantizada
+ * @param COMPRESSOR_MATRIZ *codificadosAC estrutura de codificacao AC
+*/
 void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC) {
 
     int zerosY = 0,  zerosCb = 0, zerosCr = 0;
@@ -735,6 +804,12 @@ void RunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC)
 
 }
 
+/**
+ * Funcao para reverter o processo de codificacao por carreira
+ * 
+ * @param COMPRESSOR_YCBCR *vetorizados estrutura de dados da matriz quantizada
+ * @param COMPRESSOR_MATRIZ *codificadosAC estrutura de codificacao AC
+*/
 void inversaRunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codificadosAC) {
 
     int zerosY = 0,  zerosCb = 0, zerosCr = 0;
@@ -857,6 +932,16 @@ void inversaRunLength(COMPRESSOR_MATRIZ *vetorizados, COMPRESSOR_LISTAS *codific
 
 }
 
+/**
+ * Funcao para codificacao estatistica da compressao
+ * 
+ * @param FILE *file arquivo em especifico
+ * @param int DCY fator dc de y
+ * @param int DCCb fator dc de cb
+ * @param int DCCr faotr dc de cr
+ * @param COMPRESSOR_LISTAS *codificadosAC estrutura de codificacao AC
+ * @param int fatorCompressao o fator de compressao exato
+*/
 void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC, int fatorCompressao) {
 
     unsigned char fator = (unsigned char) fatorCompressao;
@@ -1040,6 +1125,16 @@ void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_
 
 }
 
+/**
+ * Funcao para leitura estatistica da compressao
+ * 
+ * @param FILE *file arquivo em especifico
+ * @param int DCY fator dc de y
+ * @param int DCCb fator dc de cb
+ * @param int DCCr faotr dc de cr
+ * @param COMPRESSOR_LISTAS *codificadosAC estrutura de codificacao AC
+ * @param int fatorCompressao o fator de compressao exato
+*/
 void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC, int *fatorCompressao) {
 
     unsigned char fator;
