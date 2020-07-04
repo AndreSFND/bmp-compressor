@@ -1202,7 +1202,13 @@ void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_L
 }
 
 // Funcoes auxiliares
-
+/**
+ * Funcao para retornar a categoria de dado coeficiente
+ * 
+ * @param float coeficiente
+ * 
+ * @returns int categoria
+*/
 int categoriaCoeficiente(float coeficiente) {
 
     int categoria = 0;
@@ -1220,6 +1226,13 @@ int categoriaCoeficiente(float coeficiente) {
 
 }
 
+/**
+ * Funcao para retornar o prefixo dc correto
+ * 
+ * @param int categoria
+ * 
+ * @returns char* prefixo dc
+*/
 char* prefixoDC(int categoria) {
 
     char* prefixos[11] = {
@@ -1245,6 +1258,14 @@ char* prefixoDC(int categoria) {
 
 }
 
+/**
+ * Funcao para retornar o prefixo ac correto
+ * 
+ * @param int categoria
+ * @param int zeros
+ * 
+ * @returns char* prefixo ac
+*/
 char* prefixoAC(int zeros, int categoria) {
 
     if(zeros == 0 && categoria == 0)
@@ -1280,6 +1301,14 @@ char* prefixoAC(int zeros, int categoria) {
 
 }
 
+/**
+ * Funcao para retornar o prefixo acdc correto
+ * 
+ * @param int categoria
+ * @param int valor
+ * 
+ * @returns char* prefixo acdc
+*/
 char* sufixoDCAC(int categoria, int valor) {
 
     if(!categoria)
@@ -1331,6 +1360,14 @@ char *strrev(char *str) {
       return str;
 }
 
+/**
+ * Faz conversao de decimal para binario
+ * 
+ * @param int deci o numero em deciaml
+ * @param char* bin
+ * @param int tamanho
+ * 
+*/
 void converterDeciBin(int deci, char *bin, int tamanho) {
 
     for(int i=0; i<tamanho; i++) {
@@ -1344,6 +1381,13 @@ void converterDeciBin(int deci, char *bin, int tamanho) {
 
 }
 
+/**
+ * Faz conversao de binario para decimal
+ * 
+ * @param int deci o numero em deciaml
+ * @param char* bin
+ * 
+*/
 void converterBinDeci(char *bin, int *deci) {
 
     *deci = 0;
@@ -1356,6 +1400,14 @@ void converterBinDeci(char *bin, int *deci) {
 
 }
 
+/**
+ * Funcao para fazer o caminho inverso da funcao de achar sufixo acdc
+ * 
+ * @param char* sufixo
+ * @param int categoria
+ * @param int* valor
+ * 
+*/
 void inverteSufixoDCAC(char *sufixo, int categoria, int *valor) {
 
     if(!sufixo)
@@ -1377,6 +1429,13 @@ void inverteSufixoDCAC(char *sufixo, int categoria, int *valor) {
 
 }
 
+/**
+ * Funcao para retornar o prefixo dc correto
+ * 
+ * @param char* prefixo
+ * 
+ * @returns int categoria
+*/
 int invertePrefixoDC(char *prefixo) {
 
     char* prefixos[11] = {
@@ -1402,6 +1461,14 @@ int invertePrefixoDC(char *prefixo) {
 
 }
 
+/**
+ * Funcao para retornar o prefixo ac correto
+ * 
+ * @param char* prefixo
+ * @param int* categoria
+ * @param int* zeros
+ * 
+*/
 void invertePrefixoAC(char *prefixo, int *zeros, int *categoria) {
 
     char* prefixos[16][10] = {
@@ -1456,6 +1523,14 @@ void invertePrefixoAC(char *prefixo, int *zeros, int *categoria) {
 
 }
 
+/**
+ * Funcao para conversao de dc
+ * 
+ * @param int categoria
+ * @param int dc
+ * @param int* valor
+ * 
+*/
 void converteDC(int categoria, int DC, int *valor) {
 
     char* codigo = calloc((sizeof(int)*8), sizeof(char));
@@ -1487,6 +1562,15 @@ void converteDC(int categoria, int DC, int *valor) {
 
 }
 
+/**
+ * Funcao para conversao de ac
+ * 
+ * @param int categoria
+ * @param int ac
+ * @param int* valor
+ * @param int* zeros
+ * 
+*/
 void converteAC(int categoria, int AC, int *valor, int *zeros) {
 
     char* codigo = calloc(sizeof(int)*8, sizeof(char));
