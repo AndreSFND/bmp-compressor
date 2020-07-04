@@ -54,10 +54,4 @@
         void codificacaoEstatistica(FILE *file, int DCY, int DCCb, int DCCr, COMPRESSOR_LISTAS *codificadosAC, int fatorCompressao);
         void leituraEstatistica(FILE *file, int *DCY, int *DCCb, int *DCCr, COMPRESSOR_LISTAS *codificadosAC, int *fatorCompressao);
 
-        int categoriaCoeficiente(float coeficiente);
-        char* prefixoDC(int categoria);
-        char* prefixoAC(int zeros, int categoria);
-        char* sufixoDCAC(int categoria, int valor);
-        void Teste();
-
 #endif

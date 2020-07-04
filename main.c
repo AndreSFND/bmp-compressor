@@ -119,8 +119,7 @@ int main() {
                         liberaRGB(&RGB);
 
                         // Realiza o processo de downsampling
-                        // TODO: o downsampling deve ficar fora do loop
-                        //DownSampling(&YCbCr);
+                        DownSampling(&YCbCr);
 
                         // Aplica a transformada DCT
                         COMPRESSOR_YCBCR *frequencias;

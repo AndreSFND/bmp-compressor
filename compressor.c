@@ -22,6 +22,9 @@ struct compressorycbcr {
 
 };
 
+/**
+ * A estrutura armazena tres vetores de dados das data units
+*/
 struct compressormatriz {
 
     float *vetorY;
@@ -32,6 +35,9 @@ struct compressormatriz {
 
 };
 
+/**
+ * A estrutura armazena tres listas de dados das data units
+*/
 struct compressorlistas {
 
     LISTA *listaY;
@@ -40,6 +46,10 @@ struct compressorlistas {
 
 };
 
+int categoriaCoeficiente(float coeficiente);
+char* prefixoDC(int categoria);
+char* prefixoAC(int zeros, int categoria);
+char* sufixoDCAC(int categoria, int valor);
 char *strrev(char *str);
 void converterDeciBin(int deci, char *bin, int tamanho);
 void converterBinDeci(char *bin, int *deci);
@@ -260,8 +270,7 @@ void DownSampling(COMPRESSOR_YCBCR **YCbCr) {
                 
         }
 
-    }
-        
+    }        
 
     // Aloca memoria para a nova matriz Cr e realiza o downsamlping em Cr
     dsCr = malloc( sizeof(float*) * HEIGHT );
@@ -312,7 +321,13 @@ void transformadaDCT(COMPRESSOR_YCBCR *frequencias, COMPRESSOR_YCBCR *YCbCr) {
     float proporcaoB = YCbCr->proporcaoB / 4.0;
     float proporcaoR = YCbCr->proporcaoR / 4.0;
 
-    // Monta a matriz de frequencias de Y
+    frequencias->proporcaoB = YCbCr->proporcaoB;
+    frequencias->proporcaoR = YCbCr->proporcaoR;
+
+    int resizedWidthB = (int) (WIDTH * proporcaoB );
+    int resizedWidthR = (int) (WIDTH * proporcaoR );
+
+    // Monta a matriz de frequencias
     for(int v=0; v<HEIGHT; v++) {
 
         for(int u=0; u<WIDTH; u++) {
@@ -320,26 +335,45 @@ void transformadaDCT(COMPRESSOR_YCBCR *frequencias, COMPRESSOR_YCBCR *YCbCr) {
             float uAlpha = ( u == 0 ? 1.0/sqrt(2.0) : 1.0 );
             float vAlpha = ( v == 0 ? 1.0/sqrt(2.0) : 1.0 );
 
-            float sumY = 0, sumCb = 0, sumCr = 0;
+            float sumY = 0;
 
-            for(int x=0; x<WIDTH; x++) {
-
-                for(int y=0; y<HEIGHT; y++) {
-
+            for(int x=0; x<WIDTH; x++)
+                for(int y=0; y<HEIGHT; y++)
                     sumY += YCbCr->Y[x][y] * cos( ( (2.0*x + 1.0) * u * PI ) / 16.0 ) * cos( ( (2.0*y + 1.0) * v * PI ) / 16.0 );
-                    sumCb += YCbCr->Cb[x][ (int)(y*proporcaoB) ] * cos( ( (2.0*x + 1.0) * u * PI ) / 16.0 ) * cos( ( (2.0*y + 1.0) * v * PI ) / 16.0 );
-                    sumCr += YCbCr->Cr[x][ (int)(y*proporcaoR) ] * cos( ( (2.0*x + 1.0) * u * PI ) / 16.0 ) * cos( ( (2.0*y + 1.0) * v * PI ) / 16.0 );
-                    
-                }
-
-            }
 
             float frequenciaY = (uAlpha / 2.0) * (vAlpha / 2.0) * sumY;
-            float frequenciaCb = (uAlpha / 2.0) * (vAlpha / 2.0) * sumCb;
-            float frequenciaCr = (uAlpha / 2.0) * (vAlpha / 2.0) * sumCr;
-
             frequencias->Y[v][u] = frequenciaY;
+
+        }
+
+        for(int u=0; u<resizedWidthB; u++) {
+
+            float uAlpha = ( u == 0 ? 1.0/sqrt(2.0) : 1.0 );
+            float vAlpha = ( v == 0 ? 1.0/sqrt(2.0) : 1.0 );
+
+            float sumCb = 0;
+
+            for(int x=0; x<WIDTH; x++)
+                for(int y=0; y<HEIGHT; y++)
+                    sumCb += YCbCr->Cb[x][ (int)(y*proporcaoB) ] * cos( ( (2.0*x + 1.0) * u * PI ) / 16.0 ) * cos( ( (2.0*y + 1.0) * v * PI ) / 16.0 );
+
+            float frequenciaCb = (uAlpha / 2.0) * (vAlpha / 2.0) * sumCb;
             frequencias->Cb[v][u] = frequenciaCb;
+
+        }
+
+        for(int u=0; u<resizedWidthR; u++) {
+
+            float uAlpha = ( u == 0 ? 1.0/sqrt(2.0) : 1.0 );
+            float vAlpha = ( v == 0 ? 1.0/sqrt(2.0) : 1.0 );
+
+            float sumCr = 0;
+
+            for(int x=0; x<WIDTH; x++)
+                for(int y=0; y<HEIGHT; y++)
+                    sumCr += YCbCr->Cr[x][ (int)(y*proporcaoR) ] * cos( ( (2.0*x + 1.0) * u * PI ) / 16.0 ) * cos( ( (2.0*y + 1.0) * v * PI ) / 16.0 );
+
+            float frequenciaCr = (uAlpha / 2.0) * (vAlpha / 2.0) * sumCr;
             frequencias->Cr[v][u] = frequenciaCr;
 
         }
@@ -398,6 +432,15 @@ void inversaDCT(COMPRESSOR_YCBCR *frequencias, COMPRESSOR_YCBCR *YCbCr) {
 */
 void Quantizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias, int fatorCompressao) {
 
+    float proporcaoB = frequencias->proporcaoB / 4.0;
+    float proporcaoR = frequencias->proporcaoR / 4.0;
+
+    quantizada->proporcaoB = frequencias->proporcaoB;
+    quantizada->proporcaoR = frequencias->proporcaoR;
+
+    int resizedWidthB = (int) (WIDTH * proporcaoB );
+    int resizedWidthR = (int) (WIDTH * proporcaoR );
+
     // Fator de compressao
     int k = fatorCompressao;
 
@@ -434,7 +477,17 @@ void Quantizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequencias, in
         for(int j=0; j<WIDTH; j++) {
 
             quantizada->Y[i][j] = round( frequencias->Y[i][j] / ( k * QLuminancia[i][j] ) );
+
+        }
+
+        for(int j=0; j<resizedWidthB; j++) {
+
             quantizada->Cb[i][j] = round( frequencias->Cb[i][j] / ( k * QCrominancia[i][j] ) );
+
+        }
+
+        for(int j=0; j<resizedWidthR; j++) {
+
             quantizada->Cr[i][j] = round( frequencias->Cr[i][j] / ( k * QCrominancia[i][j] ) );
 
         }
@@ -498,13 +551,17 @@ void inversaQuantizada(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_YCBCR *frequenci
 */
 void Vetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados) {
 
+    float proporcaoB = quantizada->proporcaoB / 4.0;
+    float proporcaoR = quantizada->proporcaoR / 4.0;
+
+    int resizedWidthB = (int) (WIDTH * proporcaoB );
+    int resizedWidthR = (int) (WIDTH * proporcaoR );
+
     int x = 0, y = 0;
 
     for(int i=0; i<HEIGHT*WIDTH; i++) {
 
         vetorizados->vetorY[i] = quantizada->Y[y][x];
-        vetorizados->vetorCb[i] = quantizada->Cb[y][x];
-        vetorizados->vetorCr[i] = quantizada->Cr[y][x];
 
         // Direita
         if((y == 0 || y == HEIGHT-1) && x < WIDTH-1  && x % 2 == 0) {
@@ -527,6 +584,78 @@ void Vetorizacao(COMPRESSOR_YCBCR *quantizada, COMPRESSOR_MATRIZ *vetorizados) {
         }
         // Diagonal para cima
         else if( (x + y) % 2 == 0 && y > 0 && x < WIDTH-1 ) {
+
+            x++;
+            y--;
+
+        }
+
+    }
+
+    x = 0;
+    y = 0;
+
+    for(int i=0; i<HEIGHT*resizedWidthB; i++) {
+
+        vetorizados->vetorCb[i] = quantizada->Cb[y][x];
+
+        // Direita
+        if((y == 0 || y == HEIGHT-1) && x < resizedWidthB-1  && x % 2 == 0) {
+        
+            x++;
+        
+        } 
+        // Baixo
+        else if((x == 0 || x == resizedWidthB-1) && y < HEIGHT-1 && y % 2 != 0) {
+
+            y++;
+
+        }
+        // Diagonal para baixo
+        else if( (x + y) % 2 != 0 && x > 0 && y < HEIGHT-1 ) {
+
+            x--;
+            y++;
+
+        }
+        // Diagonal para cima
+        else if( (x + y) % 2 == 0 && y > 0 && x < resizedWidthB-1 ) {
+
+            x++;
+            y--;
+
+        }
+
+    }
+
+    x = 0;
+    y = 0;
+
+    for(int i=0; i<HEIGHT*resizedWidthR; i++) {
+
+        vetorizados->vetorCr[i] = quantizada->Cr[y][x];
+
+        // Direita
+        if((y == 0 || y == HEIGHT-1) && x < resizedWidthR-1  && x % 2 == 0) {
+        
+            x++;
+        
+        } 
+        // Baixo
+        else if((x == 0 || x == resizedWidthR-1) && y < HEIGHT-1 && y % 2 != 0) {
+
+            y++;
+
+        }
+        // Diagonal para baixo
+        else if( (x + y) % 2 != 0 && x > 0 && y < HEIGHT-1 ) {
+
+            x--;
+            y++;
+
+        }
+        // Diagonal para cima
+        else if( (x + y) % 2 == 0 && y > 0 && x < resizedWidthR-1 ) {
 
             x++;
             y--;
@@ -1088,6 +1217,12 @@ char* sufixoDCAC(int categoria, int valor) {
 
 }
 
+/**
+ * Espelha uma string
+ * 
+ * @param char *str string a ser espelhada
+ * @returns char* string espelhada
+*/
 char *strrev(char *str) {
       char *p1, *p2;
 
