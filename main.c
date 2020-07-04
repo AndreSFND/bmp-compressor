@@ -51,9 +51,9 @@ int main() {
             case 1: {
 
                 // Declara e le o nome da imagem a ser comprimida
-                char* nomeArquivo = "./img/goldhill.bmp";
-                // printf("Insira o nome da imagem a ser comprimida:\n");
-                // scanf("%ms", &nomeArquivo);
+                char* nomeArquivo;
+                printf("Insira o nome da imagem a ser comprimida:\n");
+                scanf("%ms", &nomeArquivo);
 
                 int fatorCompressao;
                 printf("Insira o fator de compressão (1 a 3):\n");
@@ -186,9 +186,9 @@ int main() {
             case 2: { 
 
                 // Declara e le o nome da imagem a ser descomprimida
-                char* nomeArquivo = "comprimido.bin";
-                // printf("Insira o nome da imagem a ser descomprimida:\n");
-                // scanf("%ms", &nomeArquivo);
+                char* nomeArquivo;
+                printf("Insira o nome da imagem a ser descomprimida:\n");
+                scanf("%ms", &nomeArquivo);
 
                 // Fator de compressao
                 int fatorCompressao;
