@@ -198,6 +198,13 @@ NO *Lista_No_Proximo(NO *No) {
 
 }
 
+/**
+ * Retorna o zero de um no
+ * 
+ * @param NO *No a ser manipulado
+ * 
+ * @returns int zeros do no
+*/
 int Lista_No_Zeros(NO *No) {
 
     if(No != NULL)
@@ -207,6 +214,13 @@ int Lista_No_Zeros(NO *No) {
 
 }
 
+/**
+ * Retorna o valor de um outro no
+ * 
+ * @param NO *No a ser manipulado
+ * 
+ * @returns float valor do no
+*/
 float Lista_No_Valor(NO *No) {
 
     if(No != NULL)
@@ -216,6 +230,13 @@ float Lista_No_Valor(NO *No) {
 
 }
 
+/**
+ * Retorna a categoria de um outro no
+ * 
+ * @param NO *No a ser manipulado
+ * 
+ * @returns int categoria do no
+*/
 int Lista_No_Categoria(NO *No) {
 
     if(No != NULL)
